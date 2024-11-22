@@ -1,8 +1,8 @@
 /*
   TODO:
-  - Check history state-tracking.
   - Twist-down for groups.
-  - pay
+  - set paymen when changing groups, not when going to section:payme
+  - pay  
   - user menu
   - widthraw
   - invest
@@ -14,13 +14,16 @@ const LocalState = { // An object with methods, which tracks the current choices
   keys: ['section', 'user', 'group', 'groupFilter', 'currency', 'payee'], // What we track. Checks at runtime.
 
   merge(states) { // Set all the specified states, update the display, and save.
-    states = Object.assign({}, this.retrieve(), states);
-    console.log(states);
+    const merged = Object.assign({}, this.states, this.retrieve(), states);
+    const initialHref = location.href;
+    
     let isChanged = false;
-    for (let key in states) {
-      isChanged ||= this.update1(key, states[key]);
+    for (let key in merged) {
+      isChanged ||= this.update1(key, merged[key]);
     }
+    this.states = merged; // After update1, and before save.
     if (isChanged) this.save();
+    console.log(JSON.stringify(states), initialHref, JSON.stringify(merged), isChanged, location.href);
   },
   setState(key, state) { // Set one of the states, identified by key. Updates display and saves.
     if (this.update1(key, state)) this.save();
@@ -75,9 +78,10 @@ const LocalState = { // An object with methods, which tracks the current choices
   // Internal machinery.
   states: {groupFilter: 'allGroups'}, // Current values, including initially.
   save() { // Persist for next session, and update browser history, too.
-    let string = JSON.stringify(this.states);
+    const string = JSON.stringify(this.states),
+	  href = this.url.href;
     localStorage.setItem('localState', string);
-    history.pushState(this.states, document.title, this.url);
+    if (href !== location.href) history.pushState(this.states, document.title, href);
   },
   retrieve() { // Get saved state.
     let string = localStorage.getItem('localState');
@@ -112,15 +116,17 @@ const LocalState = { // An object with methods, which tracks the current choices
 };
 
 function hashChange() {
+  console.log('hashChange');
   LocalState.merge({section: location.hash.slice(1)});
 }
 function toggleGroup(event) {
+  console.log('toggleGroup', event.target.dataset.href);
   const group = event.target.dataset.href;
   if (!group) return;
   LocalState.merge({group: LocalState.getState('group') === group ? '' : group});
 }
 
-window.addEventListener('popstate', event => event.state && LocalState.merge(event.state)); // Triggered by FIXME
+window.addEventListener('popstate', event => {console.log('popstate', event.state); event.state && LocalState.merge(event.state);}); // Triggered by FIXME
 window.addEventListener('hashchange', hashChange);
 window.addEventListener('load', () => {
   console.log('loading');
