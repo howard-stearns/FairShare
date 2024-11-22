@@ -1,11 +1,50 @@
+/* This is how we get stuff to appear and disappear.*/
+/* Off by default, or in certain conditions */
+section, group-details, expanding-li button.mdl-button--colored {
+    display: none;
+}
+body:not(.allGroups) #groupsList li:has(span > label > input:not([checked])),
+body.apples li[id="apples"] button:not(.mdl-button--colored),
+body.bananas li[id="bananas"] button:not(.mdl-button--colored) {
+    display: none;
+}
+/* Make the current nav link look disabled */
+.groups   [href="#groups"],
+.pay      [href="#pay"],
+.withdraw [href="#withdraw"],
+.invest   [href="#invest"],
+.about    [href="#about"] {
+    opacity: 0.5;
+}
+/* On in certain conditions */
+.groups   #groups,
+.pay      #pay,
+.withdraw #withdraw,
+.invest   #invest,
+.about    #about,
+.payme    #payme {
+    display: block;
+}
+body.apples li[id="apples"] button.mdl-button--colored,
+body.bananas li[id="bananas"] button.mdl-button--colored {
+    display: block;
+}
+body.apples li#apples group-details,
+body.bananas li#bananas group-details,
+body.coconuts li#cocounuts group-details {
+    display: block;
+}
+
+/* Special stuff of ours */
 #subtitle::before { content: ": "; }
+double-labeled-switch .mdl-switch { width: fit-content; }
+double-labeled-switch .switch-label { padding-right: 16px; }
 
-section, group-details { display: none; }
-.groups #groups, .pay #pay, .withdraw #withdraw, .invest #invest, .about #about, .payme #payme { display: block; }
-.groups [href="#groups"], .pay [href="#pay"], .withdraw [href="#withdraw"], .invest [href="#invest"], .about [href="#about"] { opacity: 0.5; }
-body:not(.allGroups) #groupsList li:has(span > label > input:not([checked])) { display: none; }
-body.apples li#apples group-details, body.bananas li#bananas group-details, body.coconuts li#cocounuts group-details { display: block; }
-
+/* Basic sizing and spacing */
+#about .page-content { padding: 16px; }
+#about .page-content { margin: 16px; }
+#groups .mdl-textfield { width: 70px; }
+#qrDisplay { display: flex; justify-content: center; }
 .avatar-button { height: 40px; width: 40px; }
 .identicon {
     height: 40px;
@@ -27,6 +66,7 @@ group-details row {
     align-items: center;
     padding-left: 60px;
 }
+row label { width: fit-content !important; }
 spacer {
     flex-grow: 5;
     flex-basis: 40px;
@@ -43,13 +83,3 @@ expanding-li {
     padding-left: 16px;
     padding-bottom: 6px;
 }
-#about .page-content { padding: 16px; }
-	
-
-row label { width: fit-content !important; }
-double-labeled-switch .mdl-switch { width: fit-content; }
-double-labeled-switch .switch-label { padding-right: 16px; }
-
-#about .page-content { margin: 16px; }
-#groups .mdl-textfield { width: 70px; }
-#qrDisplay { display: flex; justify-content: center; }

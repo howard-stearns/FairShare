@@ -1,6 +1,5 @@
 /*
   TODO:
-  - Twist-down for groups.
   - set paymen when changing groups, not when going to section:payme
   - pay  
   - user menu
@@ -13,9 +12,18 @@
 const LocalState = { // An object with methods, which tracks the current choices for this user, across history and sessions. See README.md
   keys: ['section', 'user', 'group', 'groupFilter', 'currency', 'payee'], // What we track. Checks at runtime.
 
-  merge(states) { // Set all the specified states, update the display, and save.
+  merge(states, initializeClasses = false) { // Set all the specified states, update the display, and save.
     const merged = Object.assign({}, this.states, this.retrieve(), states);
     const initialHref = location.href;
+    if (initializeClasses) { // Startup: Initialize classes and other display.
+      const classList = document.body.classList;
+      for (let key in merged) {
+	let name = merged[key];
+	if (!name) continue;
+	classList.add(name);
+	this[key]?.(name);
+      }
+    }
     
     let isChanged = false;
     for (let key in merged) {
@@ -112,21 +120,25 @@ const LocalState = { // An object with methods, which tracks the current choices
     this[key]?.(state); // Call initializer for key if it is defined here.
     this.updateURL(key, state); // Make the internal url reflect state. Used by save().
     return true;
+  },
+  updateClasses() {
   }
 };
 
 function hashChange() {
   console.log('hashChange');
-  LocalState.merge({section: location.hash.slice(1)});
+  LocalState.merge({section: location.hash.slice(1)}, true);
 }
 function toggleGroup(event) {
-  console.log('toggleGroup', event.target.dataset.href);
-  const group = event.target.dataset.href;
+  let item = event.target;
+  while (!item.hasAttribute('id')) item = item.parentElement;
+  console.log('toggleGroup', item);
+  const group = item.getAttribute('id');
   if (!group) return;
   LocalState.merge({group: LocalState.getState('group') === group ? '' : group});
 }
 
-window.addEventListener('popstate', event => {console.log('popstate', event.state); event.state && LocalState.merge(event.state);}); // Triggered by FIXME
+window.addEventListener('popstate', event => {console.log('popstate', event.state); event.state && LocalState.merge(event.state, true);}); // Triggered by FIXME
 window.addEventListener('hashchange', hashChange);
 window.addEventListener('load', () => {
   console.log('loading');
