@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FairShare</title>
+
+    <!-- standard mobile-ready setup -->
+    <meta name="viewport" content="initial-scale=1, width=device-width">
+
+    <!-- Material Design Light components and icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+    <!-- Computed "identicon" image when not provided by user: https://jdenticon.com/ -->
+    <script defer src="https://cdn.jsdelivr.net/npm/jdenticon@3.3.0/dist/jdenticon.min.js"
+	    integrity="sha384-LfouGM03m83ArVtne1JPk926e3SGD0Tz8XHtW2OKGsgeBU/UfR0Fa8eX+UlwSSAZ" crossorigin="anonymous">
+    </script>
+    <!-- QR codes -->
+    <script type="text/javascript" src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+
+    <!-- Ours -->
+    <link rel="stylesheet" href="style.css">
+    <script defer src="fairshare.js"></script>
+  </head>
+  <body class="allGroups">
+
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+
+      <header class="mdl-layout__header">
+	<div class="mdl-layout__header-row">
+	  <span class="mdl-layout-title">FairShare<span id="subtitle"></span></span>
+	  <div class="mdl-layout-spacer"></div>
+	  <!-- On desktop or landscape tablets, show same options as navigation drawer, below -->
+	  <nav class="mdl-navigation mdl-layout--large-screen-only">
+            <a class="mdl-navigation__link" href="#groups">Groups</a>
+            <a class="mdl-navigation__link" href="#pay">Pay</a>
+            <a class="mdl-navigation__link" href="#withdraw">Withdraw</a>
+            <a class="mdl-navigation__link" href="#invest">Invest</a>
+            <a class="mdl-navigation__link" href="#about">About</a>	    
+	  </nav>
+	  <!-- The current-user icon is a context menu -->
+	  <button class="mdl-button mdl-js-button mdl-button--icon avatar-button" id="userButton">
+	    <img class="mdl-list__item-avatar" src="images/alice.jpeg"></img>
+	  </button>
+	  <ul class="mdl-menu mdl-js-menu mdl-menu--bottom-right" for="userButton">
+	    <li class="mdl-layout-title">User: Alice</li>
+	    <li class="mdl-menu__item" href="#payme">Pay-me code</li>
+	    <li class="mdl-menu__item">Profile</li>
+	    <li class="mdl-menu__item">Bob</li>
+	    <li class="mdl-menu__item">Add user</li>
+	    <li class="mdl-menu__item">Create new user</li>	    
+	  </ul>
+	</div>
+      </header>
+      <div class="mdl-layout__drawer">
+	<span class="mdl-layout-title">FairShare</span>
+	<nav class="mdl-navigation">
+	  <a class="mdl-navigation__link" href="#groups">Groups</a>
+	  <a class="mdl-navigation__link" href="#pay">Pay</a>
+	  <a class="mdl-navigation__link" href="#withdraw">Withdraw</a>
+	  <a class="mdl-navigation__link" href="#invest">Invest</a>
+	  <a class="mdl-navigation__link" href="#about">About</a>	  
+	</nav>
+      </div>
+      <main class="mdl-layout__content">
+
+	<section id="groups">
+	  <div class="page-content">
+	    <row>
+	      <spacer></spacer>
+	      <double-labeled-switch>
+		<span class="switch-label">mine</span>
+	      <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect">
+		<input type="checkbox" class="mdl-switch__input" checked id="groupFilter">
+		<span class="mdl-switch__label">all</span>
+	      </label>
+	      </double-labeled-switch>
+	    </row>
+	    <ul class="mdl-list" id="groupsList">
+
+	      <li class="mdl-list__item" id="apples">
+		<div>
+		  <expanding-li>
+		    <a class="mdl-list__item-primary-content" data-href="apples">
+		      <img class="mdl-list__item-avatar" src="images/apples.jpeg"></img>
+		      1,500 Apples
+		    </a>
+		    <span class="mdl-list__item-secondary-action">
+		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			member
+			<input type="checkbox" class="mdl-checkbox__input" checked />
+		      </label>
+		    </span>
+		  </expanding-li>
+		  <group-details>
+		    <row>
+		      <span class="mdl-list__item-primary-content">
+			balance: 1,500 ($15)
+		      </span>
+		    </row>
+		    <row>
+		      <span>transaction fee <span>12</span>%</span>
+		      <spacer></spacer>
+		      <form>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+			  <input class="mdl-textfield__input" type="number" id="applesFee">
+			  <label class="mdl-textfield__label" for="applesFee">your vote</label>
+			</div>
+		      </form>
+		    </row>
+		    <row>
+		      <span>daily stipend: <span>1</span> apple</span>
+		      <spacer></spacer>
+		      <form>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+			  <input class="mdl-textfield__input" type="number" id="applesStipend">
+			  <label class="mdl-textfield__label" for="applesStipend">your vote</label>
+			</div>
+		      </form>
+		    </row>
+		    <row>
+		      <span>Alice</span>
+		      <spacer></spacer>
+		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			eject
+			<input type="checkbox" class="mdl-checkbox__input" />
+		      </label>
+		    </row>
+		    <row>
+		      <span>Bob</span>
+		      <spacer></spacer>
+		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			eject
+			<input type="checkbox" class="mdl-checkbox__input" />
+		      </label>
+		    </row>
+		  </group-details>
+		</div>
+	      </li>
+
+	      <li class="mdl-list__item" id="bananas">
+		<div>
+		  <expanding-li>
+		    <a class="mdl-list__item-primary-content" data-href="bananas">
+		      <img class="mdl-list__item-avatar" src="images/bananas.jpeg"></img>
+		      11,250 Bananas
+		    </a>
+		    <span class="mdl-list__item-secondary-action">
+		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			member
+			<input type="checkbox" class="mdl-checkbox__input" checked />
+		      </label>
+		    </span>
+		  </expanding-li>
+		  <group-details>
+		    <row>
+		      <span class="mdl-list__item-primary-content">
+			balance: 1,250 ($75)
+		      </span>
+		    </row>
+		    <row>
+		      <span>transaction fee <span>12</span>%</span>
+		      <spacer></spacer>
+		      <form>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+			  <input class="mdl-textfield__input" type="number" id="bananasFee">
+			  <label class="mdl-textfield__label" for="bananasFee">your vote</label>
+			</div>
+		      </form>
+		    </row>
+		    <row>
+		      <span>daily stipend: <span>2</span> bananas</span>
+		      <spacer></spacer>
+		      <form>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+			  <input class="mdl-textfield__input" type="number" id="bananasStipend">
+			  <label class="mdl-textfield__label" for="bananasStipend">your vote</label>
+			</div>
+		      </form>
+		    </row>
+		    <row>
+		      <span>Bob</span>
+		      <spacer></spacer>
+		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			eject
+			<input type="checkbox" class="mdl-checkbox__input" />
+		      </label>
+		    </row>
+		    <row>
+		      <span>Carol</span>
+		      <spacer></spacer>
+		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			eject
+			<input type="checkbox" class="mdl-checkbox__input" />
+		      </label>
+		    </row>
+		  </group-details>
+		</div>
+	      </li>
+
+	      <li class="mdl-list__item">
+		<span class="mdl-list__item-primary-content">
+		  <img class="mdl-list__item-avatar" src="images/coconut.jpeg"></img>
+		  Coconuts
+		</span>
+		<span class="mdl-list__item-secondary-action">
+		  <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+		    join
+		    <input type="checkbox" class="mdl-checkbox__input" />
+		  </label>
+		</span>
+	      </li>
+	    </ul>
+	  </div>
+	</section>
+
+	<section id="pay">
+	  <div class="page-content">
+	    <row>
+	      <label>pay: <span id="payee">alice</span></label>
+	      <button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
+	      </button>
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" id="payeeMenu">
+		<li class="mdl-menu__item" data-key="alice">Alice</li>
+		<li class="mdl-menu__item" data-key="bob">Bob</li>
+		<li class="mdl-menu__item" data-key="carol">Carol</li>
+		<!-- <li class="mdl-menu__item" data-key="venmo">venmo</li> -->
+	      </ul>
+	    </row>
+	    amount..
+	  </div>
+	</section>
+
+	<section id="withdraw">
+	  <div class="page-content">withdraw</div>
+	</section>
+
+	<section id="invest">
+	  <div class="page-content">invest</div>
+	</section>
+
+	<section id="payme">
+	  <div class="page-content">
+	    <p>Another user can pay you by pointing their mobile camera app at this code, and touching the URL that the camera app displays upon reading the code.</p>
+	    <p>They can also go directly to the URL <code id="paymeURL"></code></p>
+	    <div id="qrDisplay"></div>
+	  </div>
+	</section>
+
+	<section id="about">
+	  <div class="page-content">
+	    <p>
+	      <i><b>This is a Proof-of-Concept with dummy data. For more information about the PoC, see see <a href="README.md" target="fairshare">README.md</a>.</b></i>
+	    </p>
+	    <p>FairShare is payment program in which you set your own fees, which are then distributed to members.</p>
+	    <p>Join one or more groups, or make your own. Each group has its own currency. The members of the group vote on:
+	      <ol>
+		<li>allowing a candidate member, or ejecting an existing member</li>
+		<li>the transaction fee for the group</li>
+		<li>the amount of new money to mint and give to members as a basic daily income</li>
+	      </ol>
+	    </p>
+	    <p>
+	      You can pay people in your group directly, with the group's currency, and you will be charged the current average of the member's proposals for a transaction fee. The collected fee is taken out of circulation. Most groups will want to vote to make the fees offset the daily stipend.
+	    </p>
+	    <p>
+	      You can pay people in other groups, too. The system will find the trading path that incurs the lowest fees. You can also pay people through PayPal and Venmo.
+	    </p>
+	    <p>
+	      There is a video and a very brief whitepaper at <a href="https://fairshare.social" target="fairshare">fairshare.social</a>.
+	    </p>
+	  </div>
+	</section>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
