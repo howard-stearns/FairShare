@@ -167,6 +167,20 @@
 	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency()">
 	      </ul>
 	    </row>
+	    <row>
+	      <spacer></spacer>
+	      from
+	      <spacer></spacer>
+	    </row>
+	    <row>
+	      <span id="from"></span>
+	      <span id="fromCurrency"><i>pick one</i></span>
+	      <button id="fromCurrencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
+	      </button>
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup()">
+	      </ul>
+	    </row>	      
 	  </div>
 	</section>
 
@@ -188,7 +202,7 @@
 	      <button id="paymentButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
 		<i class="material-icons">change_circle</i>
 	      </button>
-	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseReceivingGroup()">
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseGroup()">
 		<template id="paymentTemplate">
 		  <li class="mdl-menu__item"></li>
 		</template>

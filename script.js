@@ -1,5 +1,6 @@
 /*
   TODO:
+  - BUG: Choosing a value from any of the "switch" buttons on #pay, end up going to #payme.
   - pay  
   - user menu
   - widthraw
@@ -22,10 +23,8 @@ const LocalState = { // An object with methods, which tracks the current choices
   unstyled: [ 'payee', 'currency' ],
 
   merge(states, initializeClasses = false) { // Set all the specified states, update the display, and save.
-    console.log({states, thisStates: this.states, retrieve: this.retrieve()});
-    const merged = Object.assign({}, this.states, this.retrieve(), states);
-    console.log({merged});
-    const initialHref = location.href;
+    const debugHref = location.href, debugStates = this.states, debugRetrieve = this.retrieve();
+    const merged = Object.assign({}, this.retrieve(), this.states, states);
     if (initializeClasses) { // Startup: Initialize classes and other display.
       for (let key in merged) this.update1(key, merged[key]);
     }
@@ -36,10 +35,7 @@ const LocalState = { // An object with methods, which tracks the current choices
     }
     this.states = merged; // After update1, and before save.
     if (isChanged) this.save();
-    console.log(JSON.stringify(states), initialHref, JSON.stringify(merged), isChanged, location.href);
-  },
-  setState(key, state) { // Set one of the states, identified by key. Updates display and saves.
-    if (this.update1(key, state)) this.save();
+    console.log(JSON.stringify(states), JSON.stringify(debugStates), JSON.stringify(debugRetrieve), debugHref, JSON.stringify(merged), isChanged, location.href);
   },
   getState(key) { // Return a single current state value by key.
     return this.states[key];
@@ -50,7 +46,9 @@ const LocalState = { // An object with methods, which tracks the current choices
     subtitle.textContent = state;
   },
   group(state) {
-    paymeCurrency.textContent = getGroup(state).name;
+    let name = getGroup(state).name;
+    paymeCurrency.textContent = name;
+    fromCurrency.textContent = name;
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
     updateQRDisplay({payee: this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
     document.getElementById(state).scrollIntoView();
@@ -110,7 +108,6 @@ const LocalState = { // An object with methods, which tracks the current choices
       const classList = document.body.classList;
       if (old) classList.remove(old); // Subtle: can remove('nonexistent'), but remove('') is an error.
       if (state) classList.add(state);
-      this.states[key] = state;
     }
     this[key]?.(state); // Call initializer for key if it is defined here.
     this.updateURL(key, state); // Make the internal url reflect state. Used by save().
@@ -178,6 +175,7 @@ function makeGroupDisplay(key) { // Render the data for a group and it's members
     groupElement.querySelector('expanding-li input[type="checkbox"]').setAttribute('checked', 'checked');
     for (const element of groupElement.querySelectorAll('.balance')) element.textContent = balance;
     fillCurrencyMenu(key, name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu
+    fillCurrencyMenu(key, name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu    
   }
   groupsList.append(groupElement);
 }
@@ -200,8 +198,9 @@ function toggleGroup() { // Open accordian for group, and make that one current.
   if (LocalState.getState('group') === group) document.body.classList.remove(group);
   else LocalState.merge({group: group});
 }
-function chooseReceivingGroup() { // For someone to pay you. Becomes default group.
+function chooseGroup() { // For someone to pay you. Becomes default group.
   LocalState.merge({group: event.target.dataset.key});
+  event.preventDefault();
 }
 function chooseCurrency() { // What the payment is priced in
   LocalState.merge({currency: event.target.dataset.key});
@@ -218,12 +217,12 @@ function toggleDrawer() { // Close the drawer after navigating.
   document.querySelector('.mdl-layout').MaterialLayout.toggleDrawer();
 }
 function filterGroups() {
-  LocalState.setState('groupFilter', event.target.checked ? 'allGroups' : '');
+  LocalState.merge({'groupFilter': event.target.checked ? 'allGroups' : ''});
 }
 
-function hashChange() { // A change to a different section.
-  console.log('hashChange');
-  LocalState.merge({section: location.hash.slice(1) || 'groups'}, true);
+function hashChange(event, {...props} = {}) { // A change to a different section.
+  console.log('hashChange', {...props});
+  LocalState.merge({section: location.hash.slice(1) || 'groups', ...props}, true);
 }
 window.addEventListener('popstate', event => {console.log('popstate', event.state); event.state && LocalState.merge(event.state, true);}); // Triggered by FIXME
 window.addEventListener('hashchange', hashChange);
@@ -232,5 +231,7 @@ window.addEventListener('load', () => {
   getGroups().forEach(makeGroupDisplay);
   // A hack for our double-labeled switches.
   document.querySelectorAll('.switch-label').forEach(label => label.onclick = (e) => label.nextElementSibling.click(e));
-  hashChange();
+  const params = {}; // Collect any params from query parameters.
+  new URL(location).searchParams.forEach((state, key) => params[key] = state);
+  hashChange(null, params);
 });

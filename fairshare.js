@@ -100,6 +100,7 @@ class Exchange {
     return inputAmount;
   }
 }
+/*
 function testGroupCoinTrades({totalFairCoinReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
   let exchange = new Exchange({totalFairCoinReserve, totalGroupCoinReserve, fee});
   for (let i=0; i<nCycles; i++) {
@@ -120,7 +121,7 @@ function testFairCoinTrades({totalFairCoinReserve = 100, totalGroupCoinReserve =
       kAfter = exchange.totalFairCoinReserve * exchange.totalGroupCoinReserve;
   console.log(fee, kBefore / kAfter);
 }
-/*
+
 testGroupCoinTrades({});
 testGroupCoinTrades({totalGroupCoinReserve: 10000});
 testGroupCoinTrades({fee: 0.003});
