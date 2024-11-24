@@ -1,6 +1,5 @@
 /*
   TODO:
-  - BUG: Choosing a value from any of the "switch" buttons on #pay, end up going to #payme.
   - pay  
   - user menu
   - widthraw
@@ -25,13 +24,16 @@ const LocalState = { // An object with methods, which tracks the current choices
   merge(states, initializeClasses = false) { // Set all the specified states, update the display, and save.
     const debugHref = location.href, debugStates = this.states, debugRetrieve = this.retrieve();
     const merged = Object.assign({}, this.retrieve(), this.states, states);
+    this.pending = merged; // So that initializers can see other pending values.
+
     if (initializeClasses) { // Startup: Initialize classes and other display.
       for (let key in merged) this.update1(key, merged[key]);
     }
     
     let isChanged = false;
-    for (let key in merged) {
-      isChanged ||= this.update1(key, merged[key]);
+    for (const key in merged) {
+      const valueChanged = this.update1(key, merged[key]);
+      isChanged ||= valueChanged;
     }
     this.states = merged; // After update1, and before save.
     if (isChanged) this.save();
@@ -46,12 +48,12 @@ const LocalState = { // An object with methods, which tracks the current choices
     subtitle.textContent = state;
   },
   group(state) {
-    let name = getGroup(state).name;
+    let name = getGroup(state)?.name || 'pick one';
     paymeCurrency.textContent = name;
     fromCurrency.textContent = name;
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
-    updateQRDisplay({payee: this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
-    document.getElementById(state).scrollIntoView();
+    updateQRDisplay({payee: this.pending.user || this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
+    if (state) document.getElementById(state).scrollIntoView();
   },
   groupFilter(state) { // Set the toggle.
     if (groupFilter.checked === !!state) return;
@@ -67,11 +69,28 @@ const LocalState = { // An object with methods, which tracks the current choices
     const {name, img} = getUser(state),
 	  picture = `images/${img}`,
 	  fixmeOther = localPersonas[(localPersonas.indexOf(state)+1) % localPersonas.length];
-    setCurrentUserKey(state);
     currentUserName.textContent = name;
     userButton.querySelector('img').src = picture;
     fixmeOtherUser.textContent = getUser(fixmeOther).name; fixmeOtherUser.dataset.href = fixmeOther;
-    updateQRDisplay({payee: state, currency: this.states.currency, imageURL: picture});
+    updateQRDisplay({payee: state, currency: this.pending.currency || this.states.currency, imageURL: picture});
+    document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
+    document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
+    for (const groupElement of groupsList.children) {
+      const key = groupElement.id,
+	    group = getGroup(key);
+      if (!group) continue; // e.g., a template
+      const groupUserData = group.people[state],
+	    isMember = groupUserData && !groupUserData.isCandidate,
+	    checkbox = groupElement.querySelector('expanding-li input[type="checkbox"]');
+      if (!isMember) {
+	checkbox.removeAttribute('checked');
+	continue;
+      } // Otherwise, the current user is a member of this group.
+      checkbox.setAttribute('checked', 'checked');
+      for (const element of groupElement.querySelectorAll('.balance')) element.textContent = groupUserData.balance;
+      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu.
+      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu.
+    }
   },
 
   // Internal machinery.
@@ -145,11 +164,19 @@ function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code 
   paymeURL.textContent = url;
 }
 
+function updatePaymentCosts() {
+  let {group, currency} = LocalState.states;
+  let amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
+  if (!group || !currency || amount <= 0) return from.textContent = "0.00";
+  // FIXME: when group and currency do not match.
+  let target = getGroup(currency);
+  from.textContent = target.roundUpToNearest(amount * (1 +  target.fee / 100));
+}
+
 function makeGroupDisplay(key) { // Render the data for a group and it's members.
   const {name, img, people, fee, stipend} = getGroup(key);
   const groupElement = groupTemplate.content.cloneNode(true);
   const details = groupElement.querySelector('group-details');
-  console.log({key, name, img, people, groupElement});
   groupElement.querySelector('li').setAttribute('id', key);
   groupElement.querySelector('expanding-li .mdl-list__item-avatar').setAttribute('src', `images/${img}`);
   groupElement.querySelector('expanding-li .group-name').textContent = name;
@@ -171,11 +198,6 @@ function makeGroupDisplay(key) { // Render the data for a group and it's members
     personElement.querySelector('.membership-action-label').textContent = isCandidate ? 'endorse' : 'expel';
     personElement.querySelector('row > span').textContent = user.name;
     details.append(personElement);
-    if (personKey !== currentUserKey) continue;
-    groupElement.querySelector('expanding-li input[type="checkbox"]').setAttribute('checked', 'checked');
-    for (const element of groupElement.querySelectorAll('.balance')) element.textContent = balance;
-    fillCurrencyMenu(key, name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu
-    fillCurrencyMenu(key, name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu    
   }
   groupsList.append(groupElement);
 }
@@ -192,7 +214,6 @@ function toggleGroup() { // Open accordian for group, and make that one current.
   let item = event.target;
   while (!item.hasAttribute('id')) item = item.parentElement;
   const group = item.getAttribute('id');
-  console.log({event, item, group});
   if (!group) return;
   // If we're toggling the same group off, just remove it from the body class, without changing state.
   if (LocalState.getState('group') === group) document.body.classList.remove(group);
@@ -200,15 +221,16 @@ function toggleGroup() { // Open accordian for group, and make that one current.
 }
 function chooseGroup() { // For someone to pay you. Becomes default group.
   LocalState.merge({group: event.target.dataset.key});
-  event.preventDefault();
+  updatePaymentCosts();
 }
 function chooseCurrency() { // What the payment is priced in
   LocalState.merge({currency: event.target.dataset.key});
+  updatePaymentCosts();
 }
 function userMenu() { // Act on user's choice in the user context menu.
   const state = event.target.dataset.href;
-  if (['payme', 'profile', 'addUserKey', 'newUser'].includes(state)) return location.hash=state;
-  LocalState.merge({user: state});
+  if (['payme', 'profile', 'addUserKey', 'newUser'].includes(state)) return location.hash = state;
+  LocalState.merge({user: state, group: ''});
 }
 function choosePayee() { // Pick someone to pay.
   LocalState.merge({payee: event.target.dataset.key});
@@ -221,7 +243,6 @@ function filterGroups() {
 }
 
 function hashChange(event, {...props} = {}) { // A change to a different section.
-  console.log('hashChange', {...props});
   LocalState.merge({section: location.hash.slice(1) || 'groups', ...props}, true);
 }
 window.addEventListener('popstate', event => {console.log('popstate', event.state); event.state && LocalState.merge(event.state, true);}); // Triggered by FIXME

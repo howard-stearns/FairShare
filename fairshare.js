@@ -1,12 +1,28 @@
 // Initial data and local storage setup
-const users = {
-  alice: { name: "Alice", img: "alice.jpeg" },
-  bob: { name: "Bob", img: "bob.png" },
-  carol: { name: "Carol" },
-};
-function getUser(key) { return users[key]; }
-let currentUserKey = "alice";
-function setCurrentUserKey(key) { currentUserKey = key; }
+
+class SharedObject { // Stateful object that are replicated among all who have access.
+  static construct({name, key = this.name2key(name), ...properties}) { // Instantiate and record a subclass (which must defined directory).
+    return this.directory[key] = new this({name, ...properties});;
+  }
+  constructor(properties) {
+    Object.assign(this, properties);
+  }
+  static get(key) {
+    return this.directory[key];
+  }
+  static name2key(name) { // Default key given a name.
+    return name.toLowerCase().replace(/[_\s\-]/g, '');
+  }
+}
+
+class User extends SharedObject {
+  static directory = {}; // Distinct from other SharedObjects
+}
+
+User.construct({ name: "Alice", img: "alice.jpeg" });
+User.construct({ name: "Bob", img: "bob.png" });
+User.construct({ name: "Carol" });
+function getUser(key) { return User.get(key); }
 let localPersonas = ['alice', 'bob'];
 
 const groups = {
@@ -16,7 +32,12 @@ const groups = {
 };
 function getGroup(key) { return groups[key]; }
 function getGroups() { return Object.keys(groups); }
-
+function computeTransferFee(amount) {
+}
+function roundUpToNearest(number) { // Rounds up to nearest whole value of scale.
+    let {scale} = this;
+    return Math.ceil(number * scale) / scale;
+  }
 
 class Exchange {
   constructor({totalGroupCoinReserve, totalFairCoinReserve, fee = 0.003}) {
@@ -24,15 +45,11 @@ class Exchange {
   }
   scale = 1000;
   get scaledInverseFee() { return this.scale * (1 - this.fee); }
-  roundUpToNearest(number) { // Rounds up to nearest whole value of scale.
-    let {scale} = this;
-    return Math.ceil(number * scale) / scale;
-  }
   computeSellAmount(inputAmount, inputReserve, outputReserve) { // To sell an inputAmount (og group or fair coin), compute the amount of the other coin received.
     const numerator = inputAmount * outputReserve * this.scaledInverseFee;
     const denominator = inputReserve * this.scale + inputAmount * this.scaledInverseFee;
     const outputAmount = numerator / denominator;
-    return this.roundUpToNearest(outputAmount);
+    return roundUpToNearest(outputAmount);
   }
   computeBuyAmount(outputAmount, inputReserve, outputReserve) { // To buy an outputAmount (of group or fair coin), compute the cost in the other coin.
     const numerator = outputAmount * inputReserve * this.scale;
@@ -48,7 +65,7 @@ class Exchange {
     // (Note that some of the latter sections on the same page are still designated as "comming soon":
     //  https://github.com/Uniswap/docs/blob/main/docs/contracts/v1/guides/03-trade-tokens.md#eth--erc20-trades)
     const inputAmount = numerator / denominator; 
-    return this.roundUpToNearest(inputAmount);
+    return roundUpToNearest(inputAmount);
   }
   reportTransaction({label, inputAmount, outputAmount, inputReserve, outputReserve, report=false}) {
     if (!report) return;

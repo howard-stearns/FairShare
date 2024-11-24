@@ -23,6 +23,69 @@
     <script defer src="fairshare.js"></script>
   </head>
   <body>
+    <!-- repeats for each group -->
+    <template id="groupTemplate">
+      <li class="mdl-list__item">
+	<div>
+	  <expanding-li>
+	    <span class="mdl-list__item-primary-content">
+	      <img class="mdl-list__item-avatar"></img>
+	      <span class="balance"></span>&nbsp;<span class="group-name"></span>
+	      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" onclick="toggleGroup(event)">
+		<i class="material-icons">unfold_more</i>
+	      </button>
+	      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" onclick="toggleGroup()">
+		<i class="material-icons">unfold_less</i>
+	      </button>
+	    </span>
+	    <span class="mdl-list__item-secondary-action">
+	      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+		member
+		<input type="checkbox" class="mdl-checkbox__input" />
+	      </label>
+	    </span>
+	  </expanding-li>
+	  <group-details>
+	    <row>
+	      <span class="mdl-list__item-primary-content">
+		your balance:&nbsp;<span class="balance"></span>
+	      </span>
+	    </row>
+	    <row>
+	      <span>transaction fee: <span class="fee"></span>%</span>
+	      <spacer></spacer>
+	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+		<label class="mdl-textfield__label">your vote</label>
+		<input class="mdl-textfield__input" type="number"/>
+	      </div>
+	    </row>
+	    <row>
+	      <span>daily stipend: <span class="stipend"></span> <span class="group-name"></span></span>
+	      <spacer></spacer>
+	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+		<label class="mdl-textfield__label">your vote</label>
+		<input class="mdl-textfield__input" type="number"/>
+	      </div>
+	    </row>
+	  </group-details>
+	</div>
+      </li>
+    </template>
+    <!-- Each group member or candidate -->
+    <template id="groupMemberTemplate">
+      <row>
+	<span></span>
+	<spacer></spacer>
+	<label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+	  <span class="membership-action-label"></span>
+	  <input type="checkbox" class="mdl-checkbox__input" />
+	</label>
+      </row>
+    </template>
+    <!-- Filling out a currency choice menu -->
+    <template id="paymentTemplate">
+      <li class="mdl-menu__item"></li>
+    </template>
 
     <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
 
@@ -76,67 +139,7 @@
 	      </label>
 	      </double-labeled-switch>
 	    </row>
-	    <ul class="mdl-list" id="groupsList">
-	      <!-- repeats for each group -->	      
-	      <template id="groupTemplate">
-		<li class="mdl-list__item">
-		  <div>
-		    <expanding-li>
-		      <span class="mdl-list__item-primary-content">
-			<img class="mdl-list__item-avatar"></img>
-			<span class="balance"></span>&nbsp;<span class="group-name"></span>
-			<button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" onclick="toggleGroup(event)">
-			  <i class="material-icons">unfold_more</i>
-			</button>
-			<button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" onclick="toggleGroup()">
-			  <i class="material-icons">unfold_less</i>
-			</button>
-		      </span>
-		      <span class="mdl-list__item-secondary-action">
-			<label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			  member
-			  <input type="checkbox" class="mdl-checkbox__input" />
-			</label>
-		      </span>
-		    </expanding-li>
-		    <group-details>
-		      <row>
-			<span class="mdl-list__item-primary-content">
-			  your balance:&nbsp;<span class="balance"></span>
-			</span>
-		      </row>
-		      <row>
-			<span>transaction fee: <span class="fee"></span>%</span>
-			<spacer></spacer>
-			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-			  <label class="mdl-textfield__label">your vote</label>
-			  <input class="mdl-textfield__input" type="number"/>
-			</div>
-		      </row>
-		      <row>
-			<span>daily stipend: <span class="stipend"></span> <span class="group-name"></span></span>
-			<spacer></spacer>
-			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-			  <label class="mdl-textfield__label">your vote</label>
-			  <input class="mdl-textfield__input" type="number"/>
-			</div>
-		      </row>
-		    </group-details>
-		  </div>
-		</li>
-	      </template>
-	      <!-- Each group member or candidate -->
-	      <template id="groupMemberTemplate">
-		<row>
-		  <span></span>
-		  <spacer></spacer>
-		  <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-		    <span class="membership-action-label"></span>
-		    <input type="checkbox" class="mdl-checkbox__input" />
-		  </label>
-		</row>
-	      </template>
-	    </ul>
+	    <ul class="mdl-list" id="groupsList"></ul>
 	  </div>
 	</section>
 
@@ -158,7 +161,7 @@
 	    <row>
 	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
 		<label class="mdl-textfield__label" id="payAmount">amount</label>
-		<input class="mdl-textfield__input" type="number" for="payAmount"/>
+		<input class="mdl-textfield__input" type="number" for="payAmount" value="0"/>
 	      </div>
 	      <span id="currency"><i>pick one</i></span>
 	      <button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
@@ -173,7 +176,7 @@
 	      <spacer></spacer>
 	    </row>
 	    <row>
-	      <span id="from"></span>
+	      <span id="from">0.00</span>
 	      <span id="fromCurrency"><i>pick one</i></span>
 	      <button id="fromCurrencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
 		<i class="material-icons">change_circle</i>
@@ -203,9 +206,6 @@
 		<i class="material-icons">change_circle</i>
 	      </button>
 	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseGroup()">
-		<template id="paymentTemplate">
-		  <li class="mdl-menu__item"></li>
-		</template>
 	      </ul>
 	      
 	    </row>
