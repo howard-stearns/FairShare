@@ -1,20 +1,25 @@
 // Initial data and local storage setup
 const users = {
-    alice: { name: "Alice", description: "Lorem ipsum", balance: 0 },
-    bob: { name: "Bob", description: "Lorem ipsum", balance: 0 },
-    carol: { name: "Carol", description: "Lorem ipsum", balance: 0 },
+  alice: { name: "Alice", img: "alice.jpeg" },
+  bob: { name: "Bob", img: "bob.png" },
+  carol: { name: "Carol" },
 };
-const groups = [
-    { name: "Apples", members: { Alice: 1, Bob: 2 }, description: "Lorem ipsum", img: "" },
-    { name: "Bananas", members: { Bob: 3, Carol: 4 }, description: "Lorem ipsum", img: "" },
-    { name: "Coconuts", members: { Carol: 5, Alice: 6 }, description: "Lorem ipsum", img: "" },
-];
-function getUser(name) { return users[name]; }
-const currentUser = "Alice";
+function getUser(key) { return users[key]; }
+let currentUserKey = "alice";
+function setCurrentUserKey(key) { currentUserKey = key; }
+let localPersonas = ['alice', 'bob'];
+
+const groups = {
+  apples: { name: "Apples", fee: 1, stipend: 1, people: { alice: {balance: 100}, bob: {balance: 200} }, img: "apples.jpeg" },
+  bananas: { name: "Bananas", fee: 2, stipend: 2, people: { bob: {balance: 300}, carol: {balance: 400} }, img: "bananas.jpeg" },
+  coconuts: { name: "Coconuts", fee: 3, stipend: 3, people: { carol: {balance: 500}, alice: {balance: 600} }, img: "coconuts.jpeg" },
+};
+function getGroup(key) { return groups[key]; }
+function getGroups() { return Object.keys(groups); }
 
 
 class Exchange {
-  constructor({totalGroupCoinReserve, totalFairCoinReserve, fee=0.003}) {
+  constructor({totalGroupCoinReserve, totalFairCoinReserve, fee = 0.003}) {
     Object.assign(this, {totalGroupCoinReserve, totalFairCoinReserve, fee});
   }
   scale = 1000;

@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="style.css">
     <script defer src="fairshare.js"></script>
   </head>
-  <body class="allGroups">
+  <body>
 
     <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
 
@@ -30,7 +30,7 @@
 	<div class="mdl-layout__header-row">
 	  <span class="mdl-layout-title">FairShare<span id="subtitle"></span></span>
 	  <div class="mdl-layout-spacer"></div>
-	  <!-- On desktop or landscape tablets, show same options as navigation drawer, below -->
+	  <!-- On desktop and some landscape tablets, show same options as navigation drawer, below -->
 	  <nav class="mdl-navigation mdl-layout--large-screen-only">
             <a class="mdl-navigation__link" href="#groups">Groups</a>
             <a class="mdl-navigation__link" href="#pay">Pay</a>
@@ -42,17 +42,17 @@
 	  <button class="mdl-button mdl-js-button mdl-button--icon avatar-button" id="userButton">
 	    <img class="mdl-list__item-avatar" src="images/alice.jpeg"></img>
 	  </button>
-	  <ul class="mdl-menu mdl-js-menu mdl-menu--bottom-right" for="userButton">
-	    <li class="mdl-layout-title">User: Alice</li>
-	    <li class="mdl-menu__item" href="#payme">Pay-me code</li>
-	    <li class="mdl-menu__item">Profile</li>
-	    <li class="mdl-menu__item">Bob</li>
-	    <li class="mdl-menu__item">Add user</li>
-	    <li class="mdl-menu__item">Create new user</li>	    
+	  <ul class="mdl-menu mdl-js-menu mdl-menu--bottom-right" for="userButton" onclick="userMenu()">
+	    <li class="mdl-layout-title">User: <span id="currentUserName"></span></li>
+	    <li class="mdl-menu__item" data-href="payme">Pay-me code</li>
+	    <li class="mdl-menu__item" data-href="profile">Profile</li>
+	    <li class="mdl-menu__item" data-href="bob", id="fixmeOtherUser">Bob</li>
+	    <li class="mdl-menu__item" data-href="addUserKey">Add user</li>
+	    <li class="mdl-menu__item" data-href="newUser">Create new user</li>	    
 	  </ul>
 	</div>
       </header>
-      <div class="mdl-layout__drawer">
+      <div class="mdl-layout__drawer" onclick="toggleDrawer()">
 	<span class="mdl-layout-title">FairShare</span>
 	<nav class="mdl-navigation">
 	  <a class="mdl-navigation__link" href="#groups">Groups</a>
@@ -71,157 +71,71 @@
 	      <double-labeled-switch>
 		<span class="switch-label">mine</span>
 	      <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect">
-		<input type="checkbox" class="mdl-switch__input" checked id="groupFilter">
+		<input type="checkbox" class="mdl-switch__input" checked id="groupFilter" onclick="filterGroups()">
 		<span class="mdl-switch__label">all</span>
 	      </label>
 	      </double-labeled-switch>
 	    </row>
 	    <ul class="mdl-list" id="groupsList">
-
-	      <li class="mdl-list__item" id="apples">
-		<div>
-		  <expanding-li>
-		    <span class="mdl-list__item-primary-content">
-		      <img class="mdl-list__item-avatar" src="images/apples.jpeg"></img>
-		      1,500 Apples
-		      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab">
-			<i class="material-icons">unfold_more</i>
-		      </button>
-		      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
-			<i class="material-icons">unfold_less</i>
-		      </button>
-		    </span>
-		    <span class="mdl-list__item-secondary-action">
-		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			member
-			<input type="checkbox" class="mdl-checkbox__input" checked />
-		      </label>
-		    </span>
-		  </expanding-li>
-		  <group-details>
-		    <row>
+	      <!-- repeats for each group -->	      
+	      <template id="groupTemplate">
+		<li class="mdl-list__item">
+		  <div>
+		    <expanding-li>
 		      <span class="mdl-list__item-primary-content">
-			balance: 1,500 ($15)
+			<img class="mdl-list__item-avatar"></img>
+			<span class="balance"></span>&nbsp;<span class="group-name"></span>
+			<button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" onclick="toggleGroup(event)">
+			  <i class="material-icons">unfold_more</i>
+			</button>
+			<button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" onclick="toggleGroup()">
+			  <i class="material-icons">unfold_less</i>
+			</button>
 		      </span>
-		    </row>
-		    <row>
-		      <span>transaction fee <span>12</span>%</span>
-		      <spacer></spacer>
-		      <form>
-			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-			  <input class="mdl-textfield__input" type="number" id="applesFee">
-			  <label class="mdl-textfield__label" for="applesFee">your vote</label>
-			</div>
-		      </form>
-		    </row>
-		    <row>
-		      <span>daily stipend: <span>1</span> apple</span>
-		      <spacer></spacer>
-		      <form>
-			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-			  <input class="mdl-textfield__input" type="number" id="applesStipend">
-			  <label class="mdl-textfield__label" for="applesStipend">your vote</label>
-			</div>
-		      </form>
-		    </row>
-		    <row>
-		      <span>Alice</span>
-		      <spacer></spacer>
-		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			eject
-			<input type="checkbox" class="mdl-checkbox__input" />
-		      </label>
-		    </row>
-		    <row>
-		      <span>Bob</span>
-		      <spacer></spacer>
-		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			eject
-			<input type="checkbox" class="mdl-checkbox__input" />
-		      </label>
-		    </row>
-		  </group-details>
-		</div>
-	      </li>
-
-	      <li class="mdl-list__item" id="bananas">
-		<div>
-		  <expanding-li>
-		    <span class="mdl-list__item-primary-content">
-		      <img class="mdl-list__item-avatar" src="images/bananas.jpeg"></img>
-		      11,250 Bananas
-		      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab">
-			<i class="material-icons">unfold_more</i>
-		      </button>
-		      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
-			<i class="material-icons">unfold_less</i>
-		      </button>
-		    </span>
-		    <span class="mdl-list__item-secondary-action">
-		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			member
-			<input type="checkbox" class="mdl-checkbox__input" checked />
-		      </label>
-		    </span>
-		  </expanding-li>
-		  <group-details>
-		    <row>
-		      <span class="mdl-list__item-primary-content">
-			balance: 1,250 ($75)
+		      <span class="mdl-list__item-secondary-action">
+			<label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+			  member
+			  <input type="checkbox" class="mdl-checkbox__input" />
+			</label>
 		      </span>
-		    </row>
-		    <row>
-		      <span>transaction fee <span>12</span>%</span>
-		      <spacer></spacer>
-		      <form>
+		    </expanding-li>
+		    <group-details>
+		      <row>
+			<span class="mdl-list__item-primary-content">
+			  your balance:&nbsp;<span class="balance"></span>
+			</span>
+		      </row>
+		      <row>
+			<span>transaction fee: <span class="fee"></span>%</span>
+			<spacer></spacer>
 			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-			  <input class="mdl-textfield__input" type="number" id="bananasFee">
-			  <label class="mdl-textfield__label" for="bananasFee">your vote</label>
+			  <label class="mdl-textfield__label">your vote</label>
+			  <input class="mdl-textfield__input" type="number"/>
 			</div>
-		      </form>
-		    </row>
-		    <row>
-		      <span>daily stipend: <span>2</span> bananas</span>
-		      <spacer></spacer>
-		      <form>
+		      </row>
+		      <row>
+			<span>daily stipend: <span class="stipend"></span> <span class="group-name"></span></span>
+			<spacer></spacer>
 			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-			  <input class="mdl-textfield__input" type="number" id="bananasStipend">
-			  <label class="mdl-textfield__label" for="bananasStipend">your vote</label>
+			  <label class="mdl-textfield__label">your vote</label>
+			  <input class="mdl-textfield__input" type="number"/>
 			</div>
-		      </form>
-		    </row>
-		    <row>
-		      <span>Bob</span>
-		      <spacer></spacer>
-		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			eject
-			<input type="checkbox" class="mdl-checkbox__input" />
-		      </label>
-		    </row>
-		    <row>
-		      <span>Carol</span>
-		      <spacer></spacer>
-		      <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-			eject
-			<input type="checkbox" class="mdl-checkbox__input" />
-		      </label>
-		    </row>
-		  </group-details>
-		</div>
-	      </li>
-
-	      <li class="mdl-list__item">
-		<span class="mdl-list__item-primary-content">
-		  <img class="mdl-list__item-avatar" src="images/coconut.jpeg"></img>
-		  Coconuts
-		</span>
-		<span class="mdl-list__item-secondary-action">
+		      </row>
+		    </group-details>
+		  </div>
+		</li>
+	      </template>
+	      <!-- Each group member or candidate -->
+	      <template id="groupMemberTemplate">
+		<row>
+		  <span></span>
+		  <spacer></spacer>
 		  <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
-		    join
+		    <span class="membership-action-label"></span>
 		    <input type="checkbox" class="mdl-checkbox__input" />
 		  </label>
-		</span>
-	      </li>
+		</row>
+	      </template>
 	    </ul>
 	  </div>
 	</section>
@@ -233,14 +147,26 @@
 	      <button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
 		<i class="material-icons">change_circle</i>
 	      </button>
-	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" id="payeeMenu">
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee()">
+		<!-- FIXME fill by people -->
 		<li class="mdl-menu__item" data-key="alice">Alice</li>
 		<li class="mdl-menu__item" data-key="bob">Bob</li>
 		<li class="mdl-menu__item" data-key="carol">Carol</li>
 		<!-- <li class="mdl-menu__item" data-key="venmo">venmo</li> -->
 	      </ul>
 	    </row>
-	    amount..
+	    <row>
+	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+		<label class="mdl-textfield__label" id="payAmount">amount</label>
+		<input class="mdl-textfield__input" type="number" for="payAmount"/>
+	      </div>
+	      <span id="currency"><i>pick one</i></span>
+	      <button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
+	      </button>
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency()">
+	      </ul>
+	    </row>
 	  </div>
 	</section>
 
@@ -256,6 +182,19 @@
 	  <div class="page-content">
 	    <p>Another user can pay you by pointing their mobile camera app at this code, and touching the URL that the camera app displays upon reading the code.</p>
 	    <p>They can also go directly to the URL <code id="paymeURL"></code></p>
+	    <row class="currency">
+	      payment in:&nbsp;
+	      <span id="paymeCurrency"><i>pick one</i></span>
+	      <button id="paymentButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
+	      </button>
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseReceivingGroup()">
+		<template id="paymentTemplate">
+		  <li class="mdl-menu__item"></li>
+		</template>
+	      </ul>
+	      
+	    </row>
 	    <div id="qrDisplay"></div>
 	  </div>
 	</section>
