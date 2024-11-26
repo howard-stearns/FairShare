@@ -6,7 +6,7 @@
   - invest, including accounting data
   - vote
   - cannot twist down a group you are not in
-  - genericize (e.g., dynamically add group-based css)
+  - genericize (including, dynamically add group-based css and populating users)
  */
 
 const LocalState = { // An object with methods, which tracks the current choices for this user, across history and sessions. See README.md
@@ -165,37 +165,55 @@ function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code 
   paymeURL.textContent = url;
 }
 
+function displayError(message, title = 'Error') { // Show an error dialog to the user.
+  console.error(message);
+  errorTitle.textContent = title;
+  errorMessage.textContent = message;
+  errorDialog.showModal();
+}
+
 function updatePaymentCosts() {
-  let {group, currency, user} = LocalState.states;
+  let {group, currency, user, payee} = LocalState.states;
   let amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
+  let fromAmount = 0;
+  const target = Group.get(currency);
   const fromCurrency = Group.get(group);
   const fromBalance = fromCurrency.people[user]?.balance;
+  function error(title, message) {
+    displayError(message, title);
+    payButton.disabled = true;
+  }
   fromBefore.textContent = fromBalance;
+  payButton.disabled = false;
   if (group !== currency) {
     console.log('Source and target currencies do not match. Trading through FairShare group.');
     document.body.classList.add('payment-bridge');
-    const target = Group.get(currency);
     const bridgeCurrency = Group.get('fairshare');
     const bridgeBalance = bridgeCurrency.people[user]?.balance;
     const bridgeAmount = target.exchange.computeBuyAmount(amount, target.exchange.totalReserveCurrencyReserve, target.exchange.totalGroupCoinReserve);
+    if (bridgeAmount <= 0 || bridgeAmount >= bridgeCurrency.exchange.totalReserveCurrencyReserve) {
+      error('Insufficient reserves', `The ${target.name} exchange only has ${bridgeCurrency.exchange.totalReserveCurrencyReserve} FairShare.`);
+    }
     bridgeCost.textContent = bridgeAmount;
     if (group === 'fairshare') { // Draw the money directly from your account in the fairshare group.
-      const fromAmount = fromCurrency.computeTransferFee(bridgeAmount);
+      fromAmount = fromCurrency.computeTransferFee(bridgeAmount);
       console.log(`Drawing ${fromAmount} from FairShare to cover ${bridgeAmount}.`);
-      fromCost.textContent = fromAmount;
-      fromAfter.textContent = fromBalance - fromAmount;
     } else { // Buy fairshare from your selected group's exchange.
-      const fromAmount = fromCurrency.exchange.computeBuyAmount(bridgeAmount, fromCurrency.exchange.totalGroupCoinReserve, fromCurrency.exchange.totalReserveCurrencyReserve);
+      fromAmount = fromCurrency.exchange.computeBuyAmount(bridgeAmount, fromCurrency.exchange.totalGroupCoinReserve, fromCurrency.exchange.totalReserveCurrencyReserve);
       console.log(`Buying ${bridgeAmount} FairShare with ${fromAmount} ${fromCurrency.name}.`);
-      fromCost.textContent = fromAmount;
-      fromAfter.textContent = fromBalance - fromAmount;
+      if (fromAmount <= 0 || fromAmount >= fromCurrency.exchange.totalReserveCurrencyReserve) {
+	error('Insufficient reserves', `The ${fromCurrency.name} exchange only has ${fromCurrency.exchange.totalReserveCurrencyReserve} FairShare.`);
+      }
     }
   } else {
     document.body.classList.remove('payment-bridge');
-    const fromAmount = fromCurrency.computeTransferFee(amount);
-    fromCost.textContent = fromAmount;
-    fromAfter.textContent = fromBalance - fromAmount;
+    fromAmount = fromCurrency.computeTransferFee(amount);
   }
+  let balanceAfter = fromBalance - fromAmount;
+  payButton.textContent = `Pay ${User.get(payee).name} ${amount} ${target.name} using ${fromAmount} ${fromCurrency.name}`;
+  if (balanceAfter < 0) error('Insufficient balance', `You only have ${fromBalance} ${fromCurrency.name}.`);
+  fromCost.textContent = fromAmount;
+  fromAfter.textContent = balanceAfter;
 }
 
 function makeGroupDisplay(key) { // Render the data for a group and it's members.

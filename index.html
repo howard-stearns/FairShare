@@ -192,7 +192,14 @@
 		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup()">
 	      </label>
 	      </ul>
-	    </row>	      
+	    </row>
+	    <row>
+	      <spacer></spacer>
+	      <button id="payButton" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+		Pay
+	      </button>
+	      <spacer></spacer>
+	    </row>
 	  </div>
 	</section>
 
@@ -248,7 +255,15 @@
 	</section>
       </main>
     </div>
-
+    <dialog id="errorDialog" class="mdl-dialog">
+      <h4 id="errorTitle" class="mdl-dialog__title">Error</h4>
+      <div class="mdl-dialog__content">
+	<p id="errorMessage"></p>
+      </div>
+      <div class="mdl-dialog__actions">
+	<button type="button" class="mdl-button close" onclick="errorDialog.close()">ok</button>
+      </div>
+    </dialog>
     <script src="script.js"></script>
   </body>
 </html>
