@@ -1,5 +1,7 @@
 // Initial data and local storage setup
 
+// Internally, amounts are in whole numbers (with costs rounded up), and fees taken as a floating point number (e.g., 12% is 0.12)
+
 class SharedObject { // Stateful object that are replicated among all who have access.
   static construct({name, key = this.name2key(name), ...properties}) { // Instantiate and record a subclass (which must defined directory).
     return this.directory[key] = new this({name, ...properties});;
@@ -15,43 +17,45 @@ class SharedObject { // Stateful object that are replicated among all who have a
   }
 }
 
-class User extends SharedObject {
-  static directory = {}; // Distinct from other SharedObjects
+class User extends SharedObject { // Represent a User
+  static directory = {}; // Distinct from other SharedObjects.
 }
 
-User.construct({ name: "Alice", img: "alice.jpeg" });
-User.construct({ name: "Bob", img: "bob.png" });
-User.construct({ name: "Carol" });
-function getUser(key) { return User.get(key); }
-let localPersonas = ['alice', 'bob'];
-
-const groups = {
-  apples: { name: "Apples", fee: 1, stipend: 1, people: { alice: {balance: 100}, bob: {balance: 200} }, img: "apples.jpeg" },
-  bananas: { name: "Bananas", fee: 2, stipend: 2, people: { bob: {balance: 300}, carol: {balance: 400} }, img: "bananas.jpeg" },
-  coconuts: { name: "Coconuts", fee: 3, stipend: 3, people: { carol: {balance: 500}, alice: {balance: 600} }, img: "coconuts.jpeg" },
-};
-function getGroup(key) { return groups[key]; }
-function getGroups() { return Object.keys(groups); }
-function computeTransferFee(amount) {
+class Group extends SharedObject { // Represent a group with currency, exchange, candidate and admitted members, etc.
+  static directory = {}; // Distsinct from other SharedObjects.
+  static list() {
+    return Object.keys(this.directory);
+  }
+  computeTransferFee(amount) {
+    return roundUpToNearest(amount * (1 + this.fee/100));
+  }
+  constructor({fee, ...props}) {
+    const number = 100e3;
+    const exchange = new Exchange({totalGroupCoinReserve: number, totalReserveCurrencyReserve: number, fee: fee/100});
+    super({exchange, fee, ...props});
+  }
 }
-function roundUpToNearest(number) { // Rounds up to nearest whole value of scale.
-    let {scale} = this;
-    return Math.ceil(number * scale) / scale;
-  }
 
-class Exchange {
-  constructor({totalGroupCoinReserve, totalFairCoinReserve, fee = 0.003}) {
-    Object.assign(this, {totalGroupCoinReserve, totalFairCoinReserve, fee});
+function roundUpToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
+  return Math.ceil(number * scale) / scale;
+}
+function roundDownToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
+  return Math.floor(number * scale) / scale;
+}
+
+class Exchange { // Implements the math of Uniswap V1.
+  constructor({totalGroupCoinReserve, totalReserveCurrencyReserve, fee = 0.003}) {
+    Object.assign(this, {totalGroupCoinReserve, totalReserveCurrencyReserve, fee});
   }
-  scale = 1000;
+  scale = 1;
   get scaledInverseFee() { return this.scale * (1 - this.fee); }
-  computeSellAmount(inputAmount, inputReserve, outputReserve) { // To sell an inputAmount (og group or fair coin), compute the amount of the other coin received.
+  computeSellAmount(inputAmount, inputReserve, outputReserve) { // To sell an inputAmount (of group or reserve currency), compute the amount of the other coin received.
     const numerator = inputAmount * outputReserve * this.scaledInverseFee;
     const denominator = inputReserve * this.scale + inputAmount * this.scaledInverseFee;
     const outputAmount = numerator / denominator;
-    return roundUpToNearest(outputAmount);
+    return roundDownToNearest(outputAmount, this.scale);
   }
-  computeBuyAmount(outputAmount, inputReserve, outputReserve) { // To buy an outputAmount (of group or fair coin), compute the cost in the other coin.
+  computeBuyAmount(outputAmount, inputReserve, outputReserve) { // To buy an outputAmount (of group or reserve currency), compute the cost in the other coin.
     const numerator = outputAmount * inputReserve * this.scale;
     const denominator = (outputReserve - outputAmount) * this.scaledInverseFee;
     // Note: In Uniswap v1, the following forumula has an additional +1, i.e., numerator / denominator + 1.
@@ -64,78 +68,78 @@ class Exchange {
     // https://github.com/Uniswap/docs/blob/main/docs/contracts/v1/guides/03-trade-tokens.md#amount-bought-sell-order
     // (Note that some of the latter sections on the same page are still designated as "comming soon":
     //  https://github.com/Uniswap/docs/blob/main/docs/contracts/v1/guides/03-trade-tokens.md#eth--erc20-trades)
-    const inputAmount = numerator / denominator; 
-    return roundUpToNearest(inputAmount);
+    const inputAmount = numerator / denominator;
+    return roundUpToNearest(inputAmount, this.scale);
   }
   reportTransaction({label, inputAmount, outputAmount, inputReserve, outputReserve, report=false}) {
     if (!report) return;
-    const {totalFairCoinReserve, totalGroupCoinReserve} = this;
+    const {totalReserveCurrencyReserve, totalGroupCoinReserve} = this;
     const fee = inputAmount * this.fee;
     const rate = outputAmount / inputAmount;
     const kBefore = inputReserve * outputReserve;
-    const kAfter = totalFairCoinReserve * totalGroupCoinReserve;
-    console.log({label, inputAmount, outputAmount, fee, rate, inputReserve, outputReserve, totalFairCoinReserve, totalGroupCoinReserve, kBefore, kAfter});
+    const kAfter = totalReserveCurrencyReserve * totalGroupCoinReserve;
+    console.log({label, inputAmount, outputAmount, fee, rate, inputReserve, outputReserve, totalReserveCurrencyReserve, totalGroupCoinReserve, kBefore, kAfter});
   }
-  sellGroupCoin(amount) { // User sells amount of group currency to reserves, removing computed outputAmount of fairCoin from reserves.
+  sellGroupCoin(amount) { // User sells amount of group currency to reserves, removing computed outputAmount of reserve currency from reserves.
     const inputAmount = amount;
     const inputReserve = this.totalGroupCoinReserve;
-    const outputReserve = this.totalFairCoinReserve;
+    const outputReserve = this.totalReserveCurrencyReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
     this.totalGroupCoinReserve += inputAmount;
-    this.totalFairCoinReserve -= outputAmount;
+    this.totalReserveCurrencyReserve -= outputAmount;
     this.reportTransaction({label: 'sellGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
     return outputAmount;
   }
-  sellFairCoin(amount) { // One can also sell the common trading coin (FairShare group) to the exchange.
+  sellReserveCurrency(amount) { // One can also sell the common trading coin (reserve currency) to the exchange.
     const inputAmount = amount;
-    const inputReserve = this.totalFairCoinReserve;
+    const inputReserve = this.totalReserveCurrencyReserve;
     const outputReserve = this.totalGroupCoinReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
     this.totalGroupCoinReserve -= outputAmount;
-    this.totalFairCoinReserve += inputAmount;
+    this.totalReserveCurrencyReserve += inputAmount;
     this.reportTransaction({label: 'sellPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
     return outputAmount;
   }
-  buyGroupCoin(amount) { // User buys amount of group currency from exchange reserves, adding computed inputAmount of fairCoin to reserves.
+  buyGroupCoin(amount) { // User buys amount of group currency from exchange reserves, adding computed inputAmount of reserve currency to reserves.
     const outputAmount = amount;
     const outputReserve = this.totalGroupCoinReserve;
-    const inputReserve = this.totalFairCoinReserve;
+    const inputReserve = this.totalReserveCurrencyReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
-    this.totalFairCoinReserve += inputAmount;
+    this.totalReserveCurrencyReserve += inputAmount;
     this.totalGroupCoinReserve -= outputAmount;
     this.reportTransaction({label: 'buyGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});
     return inputAmount;
   }
-  buyFairCoin(amount) { // One can also buy the common trading coin (FairShare group) from the exchange
+  buyReserveCurrency(amount) { // One can also buy the common trading coin (reserve currency) from the exchange
     const outputAmount = amount;
-    const outputReserve = this.totalFairCoinReserve;
+    const outputReserve = this.totalReserveCurrencyReserve;
     const inputReserve = this.totalGroupCoinReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
-    this.totalFairCoinReserve -= outputAmount;
+    this.totalReserveCurrencyReserve -= outputAmount;
     this.totalGroupCoinReserve += inputAmount;
     this.reportTransaction({label: 'buyPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});
     return inputAmount;
   }
 }
 /*
-function testGroupCoinTrades({totalFairCoinReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
-  let exchange = new Exchange({totalFairCoinReserve, totalGroupCoinReserve, fee});
+function testGroupCoinTrades({totalReserveCurrencyReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
+  let exchange = new Exchange({totalReserveCurrencyReserve, totalGroupCoinReserve, fee});
   for (let i=0; i<nCycles; i++) {
     exchange.buyGroupCoin(1);
     exchange.sellGroupCoin(1);
   }
-  let kBefore = totalFairCoinReserve * totalGroupCoinReserve,
-      kAfter = exchange.totalFairCoinReserve * exchange.totalGroupCoinReserve;
+  let kBefore = totalReserveCurrencyReserve * totalGroupCoinReserve,
+      kAfter = exchange.totalReserveCurrencyReserve * exchange.totalGroupCoinReserve;
   console.log(fee, kBefore / kAfter);
 }
-function testFairCoinTrades({totalFairCoinReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
-  let exchange = new Exchange({totalFairCoinReserve, totalGroupCoinReserve, fee});
+function testReserveCurrencyTrades({totalReserveCurrencyReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
+  let exchange = new Exchange({totalReserveCurrencyReserve, totalGroupCoinReserve, fee});
   for (let i=0; i<nCycles; i++) {
-    exchange.buyFairCoin(1);
-    exchange.sellFairCoin(1);
+    exchange.buyReserveCurrency(1);
+    exchange.sellReserveCurrency(1);
   }
-  let kBefore = totalFairCoinReserve * totalGroupCoinReserve,
-      kAfter = exchange.totalFairCoinReserve * exchange.totalGroupCoinReserve;
+  let kBefore = totalReserveCurrencyReserve * totalGroupCoinReserve,
+      kAfter = exchange.totalReserveCurrencyReserve * exchange.totalGroupCoinReserve;
   console.log(fee, kBefore / kAfter);
 }
 
@@ -144,10 +148,10 @@ testGroupCoinTrades({totalGroupCoinReserve: 10000});
 testGroupCoinTrades({fee: 0.003});
 testGroupCoinTrades({totalGroupCoinReserve: 10000, fee: 0.003});
 
-testFairCoinTrades({});
-testFairCoinTrades({totalGroupCoinReserve: 10000});
-testFairCoinTrades({fee: 0.003});
-testFairCoinTrades({totalGroupCoinReserve: 10000, fee: 0.003});
+testReserveCurrencyTrades({});
+testReserveCurrencyTrades({totalGroupCoinReserve: 10000});
+testReserveCurrencyTrades({fee: 0.003});
+testReserveCurrencyTrades({totalGroupCoinReserve: 10000, fee: 0.003});
 */
 /*
 const inputAmount = 1;
@@ -164,4 +168,20 @@ const nextOutputReserve = outputReserve - outputAmount;
 const nextInputReserve = inputReserve + inputAmount;
 const reserveRatio = nextOutputReserve / nextInputReserve;
 console.log({numerator, denominator, outputAmount, fee, rate, nextInputReserve, nextOutputReserve, reserveRatio});
+*/
+
+User.construct({ name: "Alice", img: "alice.jpeg" });
+User.construct({ name: "Bob", img: "bob.png" });
+User.construct({ name: "Carol" });
+let localPersonas = ['alice', 'bob'];
+Group.construct({ name: "Apples", fee: 1, stipend: 1, img: "apples.jpeg", people: { alice: {balance: 100}, bob: {balance: 200} }});
+Group.construct({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people: { bob: {balance: 300}, carol: {balance: 400} } });
+Group.construct({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", people: { carol: {balance: 500}, alice: {balance: 600} } });
+Group.construct({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
+
+/*
+const testAmount = 20;
+console.log(Group.get('apples').computeTransferFee(testAmount));
+console.log(Group.get('fairshare').exchange.buyReserveCurrency(testAmount), Group.get('fairshare').exchange.buyGroupCoin(testAmount));
+console.log(Group.get('fairshare').exchange.sellReserveCurrency(testAmount), Group.get('fairshare').exchange.sellGroupCoin(testAmount));
 */
