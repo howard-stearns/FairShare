@@ -4,9 +4,11 @@ section, group-details, expanding-li button.mdl-button--colored {
     display: none;
 }
 body:not(.allGroups) #groupsList li:has(expanding-li > span > label:not(.is-checked)),
+body:not(.payment-bridge) row.payment-bridge,
 body.apples li[id="apples"] button:not(.mdl-button--colored),
 body.bananas li[id="bananas"] button:not(.mdl-button--colored),
-body.coconuts li[id="coconuts"] button:not(.mdl-button--colored) {
+body.coconuts li[id="coconuts"] button:not(.mdl-button--colored),
+body.fairshare li[id="fairshare"] button:not(.mdl-button--colored) {
     display: none;
 }
 /* Make the current nav link look disabled */
@@ -28,12 +30,14 @@ body.coconuts li[id="coconuts"] button:not(.mdl-button--colored) {
 }
 body.apples li[id="apples"] button.mdl-button--colored,
 body.bananas li[id="bananas"] button.mdl-button--colored,
-body.coconuts li[id="coconuts"] button.mdl-button--colored {
+body.coconuts li[id="coconuts"] button.mdl-button--colored,
+body.fairshare li[id="fairshare"] button.mdl-button--colored {
     display: block;
 }
 body.apples li#apples group-details,
 body.bananas li#bananas group-details,
-body.coconuts li#coconuts group-details {
+body.coconuts li#coconuts group-details,
+body.fairshare li#fairshare group-details {
     display: block;
 }
 

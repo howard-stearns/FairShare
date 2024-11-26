@@ -81,28 +81,22 @@ Some behavior that is not implemented:
 - **internal persistence of group state** - Only members running unmodified module code can change the group state (e.g., account balances), and this module code kicks off anyone who is not a current member. The group state is then encrypted so that only members running unmodified module code can read it, and the encrypted state is saved in the Multisynq network. Independently of whether _peer to peer group message_ is implemented, the encrypted state could be stored in any other cloud (e.g. ipfs or the like).
 - **paying for message distribution and group state persistence** - The multisynq network charges a nonimal fee to support its operations, and also pays people to run reflectors. For this PoC, I am paying Multisynq, and partially defraying that expense by running a reflector on my hardware. Alternatives include folding this behavior into the module (rather than using Multisynq), or instituting a fee in the "directory" group to pay for it.
 
----
-list of groups
-  show: name, picture, whether you are a member
-  filter to show all or only the ones you are a member
-  create a group
-  maybe:
-    showing whether you are a member is a checkbox that implements join/leave (with confirmation)?
-    show trading price, sort by price?
-	show size of liquidity pool?
-	
-  group
-    balance, withdrawl amount, redeem-coupon
-	current tax rate, daily stipend, and proposed values of each
-    list of members
-	  show: name, picture, isMember, endorse/strike depending on ismember (checkbox changes vote), give amount
-	  filter to show all or only admitted ones
+## Technical Description
 
-settings
-  name, picture, description(?), change recovery questions
-  add device
+### Simplifying Assumptions
 
----
+- In _this_ version, there is no user-to-user networking, and no cryptography. Group interactions are currently simulated:
+  - You can switch between users within the same app page.
+  - There are only a few groups and a few members in each group. When you "vote", the PoC App simulates concurrening votes by the other group memembers in five seconds.
+  - The data is stored locally for use in subsequent sessions, but not between different browsers.
+- The Uniswap V1 model is used for trading between groups: one exchange per group, with reserves in some common currency, and trades priced for constant reserve1 * reserve2.
+  - As a common "reserve currency", there is a FairShare group that everyone is a member of. (I'm not sure that a universal group is in the spirit of FairShare. Alternatively, there are other ways to do exchanges.)
+  - The FairShare group also has an exchange, but its reserve is in a unit shown as "$". The PoC does not cover how "$" is entered or withdrawn -- just accounted. (A real MVP might need a way to do this, but it presumably creates additional regulatory complications. Maybe something through PayPal or Venmo would work?)
+- Everything is handled in whole numbers, with costs rounded up. (A real MVP would probably use [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt). It might also want to present smaller values to users by working in "pennies" but displaying "dollars" with two places after the decimal.)
+  
+
+### State
+
 The app has:
 
 - _shared state_ that is the same among all the relevant users in real time. For example, the records of each group are replicated among all members of that group, and the directory of groups and swap prices is replicated among everyone.

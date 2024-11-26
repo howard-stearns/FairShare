@@ -146,42 +146,51 @@
 	<section id="pay">
 	  <div class="page-content">
 	    <row>
-	      <label>pay: <span id="payee">alice</span></label>
-	      <button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
-		<i class="material-icons">change_circle</i>
-	      </button>
-	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee()">
-		<!-- FIXME fill by people -->
-		<li class="mdl-menu__item" data-key="alice">Alice</li>
-		<li class="mdl-menu__item" data-key="bob">Bob</li>
-		<li class="mdl-menu__item" data-key="carol">Carol</li>
-		<!-- <li class="mdl-menu__item" data-key="venmo">venmo</li> -->
-	      </ul>
-	    </row>
-	    <row>
+	      <label>pay: <span id="payee">alice</span>
+		<button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
+		  <i class="material-icons">change_circle</i>
+		</button>
+		<ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee()">
+		  <!-- FIXME fill by people -->
+		  <li class="mdl-menu__item" data-key="alice">Alice</li>
+		  <li class="mdl-menu__item" data-key="bob">Bob</li>
+		  <li class="mdl-menu__item" data-key="carol">Carol</li>
+		  <!-- <li class="mdl-menu__item" data-key="venmo">venmo</li> -->
+		</ul>
+	      </label>
 	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
 		<label class="mdl-textfield__label" id="payAmount">amount</label>
-		<input class="mdl-textfield__input" type="number" for="payAmount" value="0"/>
+		<input class="mdl-textfield__input" type="number" for="payAmount" value="0" onchange="updatePaymentCosts()"/>
 	      </div>
-	      <span id="currency"><i>pick one</i></span>
-	      <button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
-		<i class="material-icons">change_circle</i>
-	      </button>
-	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency()">
-	      </ul>
+	      <label>
+		<span id="currency"><i>pick one</i></span>
+		<button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		  <i class="material-icons">change_circle</i>
+		</button>
+		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency()">
+		</ul>
+	      </label>
 	    </row>
 	    <row>
 	      <spacer></spacer>
 	      from
 	      <spacer></spacer>
 	    </row>
+	    <row class="payment-bridge">
+	      <label>cost <span id="bridgeCost">0.00</span></label>
+	      FairShare in <span id="currencyExchanged"></span> exchange
+	    </row>
 	    <row>
-	      <span id="from">0.00</span>
-	      <span id="fromCurrency"><i>pick one</i></span>
-	      <button id="fromCurrencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
-		<i class="material-icons">change_circle</i>
-	      </button>
-	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup()">
+	      <label>cost <span id="fromCost">0.00</span></label>
+	      <label>balance before <span id="fromBefore">0.00</span></label>
+	      <label>balance after <span id="fromAfter">0.00</span></label>
+	      <label>
+		<span id="fromCurrency"><i>pick one</i></span>
+		<button id="fromCurrencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		  <i class="material-icons">change_circle</i>
+		</button>
+		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup()">
+	      </label>
 	      </ul>
 	    </row>	      
 	  </div>

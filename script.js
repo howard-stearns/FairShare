@@ -3,10 +3,10 @@
   - pay  
   - user menu
   - widthraw
-  - invest
+  - invest, including accounting data
   - vote
   - cannot twist down a group you are not in
-  - genericize
+  - genericize (e.g., dynamically add group-based css)
  */
 
 const LocalState = { // An object with methods, which tracks the current choices for this user, across history and sessions. See README.md
@@ -48,7 +48,7 @@ const LocalState = { // An object with methods, which tracks the current choices
     subtitle.textContent = state;
   },
   group(state) {
-    let name = getGroup(state)?.name || 'pick one';
+    let name = Group.get(state)?.name || 'pick one';
     paymeCurrency.textContent = name;
     fromCurrency.textContent = name;
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
@@ -60,24 +60,25 @@ const LocalState = { // An object with methods, which tracks the current choices
     groupFilter.click();
   },
   payee(state) { // Set the text.
-    payee.textContent = getUser(state).name;
+    payee.textContent = User.get(state).name;
   },
   currency(state) { // The target group for a payment to someone else.
-    currency.textContent = getGroup(state).name;
+    const {name} = Group.get(state).name;
+    currencyExchanged.textContent = currency.textContent = Group.get(state).name;;
   },
   user(state) {  // Set the images, switch user options, and qr code.
-    const {name, img} = getUser(state),
+    const {name, img} = User.get(state),
 	  picture = `images/${img}`,
 	  fixmeOther = localPersonas[(localPersonas.indexOf(state)+1) % localPersonas.length];
     currentUserName.textContent = name;
     userButton.querySelector('img').src = picture;
-    fixmeOtherUser.textContent = getUser(fixmeOther).name; fixmeOtherUser.dataset.href = fixmeOther;
+    fixmeOtherUser.textContent = User.get(fixmeOther).name; fixmeOtherUser.dataset.href = fixmeOther;
     updateQRDisplay({payee: state, currency: this.pending.currency || this.states.currency, imageURL: picture});
     document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
     for (const groupElement of groupsList.children) {
       const key = groupElement.id,
-	    group = getGroup(key);
+	    group = Group.get(key);
       if (!group) continue; // e.g., a template
       const groupUserData = group.people[state],
 	    isMember = groupUserData && !groupUserData.isCandidate,
@@ -165,16 +166,40 @@ function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code 
 }
 
 function updatePaymentCosts() {
-  let {group, currency} = LocalState.states;
+  let {group, currency, user} = LocalState.states;
   let amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
-  if (!group || !currency || amount <= 0) return from.textContent = "0.00";
-  // FIXME: when group and currency do not match.
-  let target = getGroup(currency);
-  from.textContent = target.roundUpToNearest(amount * (1 +  target.fee / 100));
+  const fromCurrency = Group.get(group);
+  const fromBalance = fromCurrency.people[user]?.balance;
+  fromBefore.textContent = fromBalance;
+  if (group !== currency) {
+    console.log('Source and target currencies do not match. Trading through FairShare group.');
+    document.body.classList.add('payment-bridge');
+    const target = Group.get(currency);
+    const bridgeCurrency = Group.get('fairshare');
+    const bridgeBalance = bridgeCurrency.people[user]?.balance;
+    const bridgeAmount = target.exchange.computeBuyAmount(amount, target.exchange.totalReserveCurrencyReserve, target.exchange.totalGroupCoinReserve);
+    bridgeCost.textContent = bridgeAmount;
+    if (group === 'fairshare') { // Draw the money directly from your account in the fairshare group.
+      const fromAmount = fromCurrency.computeTransferFee(bridgeAmount);
+      console.log(`Drawing ${fromAmount} from FairShare to cover ${bridgeAmount}.`);
+      fromCost.textContent = fromAmount;
+      fromAfter.textContent = fromBalance - fromAmount;
+    } else { // Buy fairshare from your selected group's exchange.
+      const fromAmount = fromCurrency.exchange.computeBuyAmount(bridgeAmount, fromCurrency.exchange.totalGroupCoinReserve, fromCurrency.exchange.totalReserveCurrencyReserve);
+      console.log(`Buying ${bridgeAmount} FairShare with ${fromAmount} ${fromCurrency.name}.`);
+      fromCost.textContent = fromAmount;
+      fromAfter.textContent = fromBalance - fromAmount;
+    }
+  } else {
+    document.body.classList.remove('payment-bridge');
+    const fromAmount = fromCurrency.computeTransferFee(amount);
+    fromCost.textContent = fromAmount;
+    fromAfter.textContent = fromBalance - fromAmount;
+  }
 }
 
 function makeGroupDisplay(key) { // Render the data for a group and it's members.
-  const {name, img, people, fee, stipend} = getGroup(key);
+  const {name, img, people, fee, stipend} = Group.get(key);
   const groupElement = groupTemplate.content.cloneNode(true);
   const details = groupElement.querySelector('group-details');
   groupElement.querySelector('li').setAttribute('id', key);
@@ -194,7 +219,7 @@ function makeGroupDisplay(key) { // Render the data for a group and it's members
   for (const personKey in people) {
     const {balance, isCandidate = false} = people[personKey];
     const personElement = groupMemberTemplate.content.cloneNode(true);
-    const user = getUser(personKey);
+    const user = User.get(personKey);
     personElement.querySelector('.membership-action-label').textContent = isCandidate ? 'endorse' : 'expel';
     personElement.querySelector('row > span').textContent = user.name;
     details.append(personElement);
@@ -227,6 +252,9 @@ function chooseCurrency() { // What the payment is priced in
   LocalState.merge({currency: event.target.dataset.key});
   updatePaymentCosts();
 }
+function changeAmount() {
+  updatePaymentCosts();
+}
 function userMenu() { // Act on user's choice in the user context menu.
   const state = event.target.dataset.href;
   if (['payme', 'profile', 'addUserKey', 'newUser'].includes(state)) return location.hash = state;
@@ -249,7 +277,7 @@ window.addEventListener('popstate', event => {console.log('popstate', event.stat
 window.addEventListener('hashchange', hashChange);
 window.addEventListener('load', () => {
   console.log('loading');
-  getGroups().forEach(makeGroupDisplay);
+  Group.list().forEach(makeGroupDisplay);
   // A hack for our double-labeled switches.
   document.querySelectorAll('.switch-label').forEach(label => label.onclick = (e) => label.nextElementSibling.click(e));
   const params = {}; // Collect any params from query parameters.
