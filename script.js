@@ -46,6 +46,7 @@ const LocalState = { // An object with methods, which tracks the current choices
   // These are called when their key's value is changed, and are used to set things up to match.
   section(state) {
     subtitle.textContent = state;
+    if (state === 'pay') setTimeout(updatePaymentCosts);
   },
   group(state) {
     let name = Group.get(state)?.name || 'pick one';
@@ -184,6 +185,13 @@ function updatePaymentCosts() {
     payButton.disabled = true;
   }
   fromBefore.textContent = fromBalance;
+  if (amount <= 0) {
+    payButton.disabled = true;
+    fromCost.textContent = 0;
+    fromAfter.textContent = fromBalance;
+    document.body.classLst?.remove('payment-bridge');
+    return;
+  }
   payButton.disabled = false;
   if (group !== currency) {
     console.log('Source and target currencies do not match. Trading through FairShare group.');

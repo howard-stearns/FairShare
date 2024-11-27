@@ -91,7 +91,7 @@ Some behavior that is not implemented:
   - The data is stored locally for use in subsequent sessions, but not between different browsers.
 - The Uniswap V1 model is used for trading between groups: one exchange per group, with reserves in some common currency, and trades priced for constant reserve1 * reserve2.
   - As a common "reserve currency", there is a FairShare group that everyone is a member of. (I'm not sure that a universal group is in the spirit of FairShare. Alternatively, there are other ways to do exchanges.)
-  - The FairShare group also has an exchange, but its reserve is in a unit shown as "$". The PoC does not cover how "$" is entered or withdrawn -- just accounted. (A real MVP might need a way to do this, but it presumably creates additional regulatory complications. Maybe something through PayPal or Venmo would work?)
+  - The FairShare group also has an exchange, but its reserve is in a unit shown as "$". The PoC does not cover how "$" is entered or withdrawn -- just accounted. (A real MVP might need a way to do this, but it presumably creates additional regulatory complications. Maybe something through PayPal or Venmo would work? Or maybe a chain such as Optimism?)
 - Everything is handled in whole numbers, with costs rounded up. (A real MVP would probably use [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt). It might also want to present smaller values to users by working in "pennies" but displaying "dollars" with two places after the decimal.)
   
 
