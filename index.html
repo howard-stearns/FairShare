@@ -67,6 +67,8 @@
 		<input class="mdl-textfield__input" type="number"/>
 	      </div>
 	    </row>
+	    <div class="people">
+	    </div>
 	  </group-details>
 	</div>
       </li>
@@ -200,7 +202,7 @@
 	    </row>
 	    <row>
 	      <spacer></spacer>
-	      <button id="payButton" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+	      <button id="payButton" onclick="pay()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
 		Pay
 	      </button>
 	      <spacer></spacer>
@@ -269,6 +271,10 @@
 	<button type="button" class="mdl-button close" onclick="errorDialog.close()">ok</button>
       </div>
     </dialog>
+    <div id="snackbar" aria-live="assertive" aria-atomic="true" aria-relevant="text" class="mdl-snackbar mdl-js-snackbar">
+      <div class="mdl-snackbar__text"></div>
+      <button type="button" class="mdl-snackbar__action"></button>
+    </div>
     <script src="script.js"></script>
   </body>
 </html>

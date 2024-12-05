@@ -1,11 +1,12 @@
 /*
   TODO:
-  - pay  
-  - user menu
+  - pay
+  - be consistent about naming keys vs actual SharedObjects
   - widthraw
   - invest, including accounting data
   - vote
-  - cannot twist down a group you are not in
+  - user menu
+  - disable twist down a group you are not in
   - genericize (including, dynamically add group-based css and populating users)
  */
 
@@ -22,7 +23,7 @@ const LocalState = { // An object with methods, which tracks the current choices
   unstyled: [ 'payee', 'currency' ],
 
   merge(states, initializeClasses = false) { // Set all the specified states, update the display, and save.
-    const debugHref = location.href, debugStates = this.states, debugRetrieve = this.retrieve();
+    //const debugHref = location.href, debugStates = this.states, debugRetrieve = this.retrieve();
     const merged = Object.assign({}, this.retrieve(), this.states, states);
     this.pending = merged; // So that initializers can see other pending values.
 
@@ -37,7 +38,7 @@ const LocalState = { // An object with methods, which tracks the current choices
     }
     this.states = merged; // After update1, and before save.
     if (isChanged) this.save();
-    console.log(JSON.stringify(states), JSON.stringify(debugStates), JSON.stringify(debugRetrieve), debugHref, JSON.stringify(merged), isChanged, location.href);
+    //console.log(JSON.stringify(states), JSON.stringify(debugStates), JSON.stringify(debugRetrieve), debugHref, JSON.stringify(merged), isChanged, location.href);
   },
   getState(key) { // Return a single current state value by key.
     return this.states[key];
@@ -83,15 +84,13 @@ const LocalState = { // An object with methods, which tracks the current choices
       if (!group) continue; // e.g., a template
       const groupUserData = group.people[state],
 	    isMember = groupUserData && !groupUserData.isCandidate,
-	    checkbox = groupElement.querySelector('expanding-li input[type="checkbox"]');
-      if (!isMember) {
-	checkbox.removeAttribute('checked');
-	continue;
-      } // Otherwise, the current user is a member of this group.
-      checkbox.setAttribute('checked', 'checked');
-      for (const element of groupElement.querySelectorAll('.balance')) element.textContent = groupUserData.balance;
-      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu.
-      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu.
+	    checkbox = groupElement.querySelector('expanding-li label.mdl-checkbox');
+      updateGroupBalance(groupElement, groupUserData?.balance);
+      setTimeout(() => checkbox.MaterialCheckbox[isMember ? 'check' : 'uncheck']()); // Silly, but needs time.
+      if (isMember) {
+	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu.
+	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu.
+      }
     }
   },
 
@@ -176,21 +175,22 @@ function displayError(message, title = 'Error') { // Show an error dialog to the
 function updatePaymentCosts() {
   let {group, currency, user, payee} = LocalState.states;
   let amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
-  let fromAmount = 0;
+  let fromAmount = 0, fail = false, bridgeAmount;
   const target = Group.get(currency);
   const fromCurrency = Group.get(group);
-  const fromBalance = fromCurrency.people[user]?.balance;
+  const fromBalance = fromCurrency?.people[user]?.balance;
   function error(title, message) {
     displayError(message, title);
     payButton.disabled = true;
+    fail = true;
   }
   fromBefore.textContent = fromBalance;
-  if (amount <= 0) {
+  if (!fromCurrency || amount <= 0) {
     payButton.disabled = true;
     fromCost.textContent = 0;
     fromAfter.textContent = fromBalance;
     document.body.classLst?.remove('payment-bridge');
-    return;
+    return [];
   }
   payButton.disabled = false;
   if (group !== currency) {
@@ -198,37 +198,60 @@ function updatePaymentCosts() {
     document.body.classList.add('payment-bridge');
     const bridgeCurrency = Group.get('fairshare');
     const bridgeBalance = bridgeCurrency.people[user]?.balance;
-    const bridgeAmount = target.exchange.computeBuyAmount(amount, target.exchange.totalReserveCurrencyReserve, target.exchange.totalGroupCoinReserve);
+    bridgeAmount = target.exchange.computeBuyAmount(amount, target.exchange.totalReserveCurrencyReserve, target.exchange.totalGroupCoinReserve);
     if (bridgeAmount <= 0 || bridgeAmount >= bridgeCurrency.exchange.totalReserveCurrencyReserve) {
       error('Insufficient reserves', `The ${target.name} exchange only has ${bridgeCurrency.exchange.totalReserveCurrencyReserve} FairShare.`);
     }
     bridgeCost.textContent = bridgeAmount;
     if (group === 'fairshare') { // Draw the money directly from your account in the fairshare group.
-      fromAmount = fromCurrency.computeTransferFee(bridgeAmount);
-      console.log(`Drawing ${fromAmount} from FairShare to cover ${bridgeAmount}.`);
+      fromAmount = fromCurrency.computeTransferCost(bridgeAmount);
+      console.log(`Will draw ${fromAmount} from FairShare to cover ${bridgeAmount}.`);
     } else { // Buy fairshare from your selected group's exchange.
       fromAmount = fromCurrency.exchange.computeBuyAmount(bridgeAmount, fromCurrency.exchange.totalGroupCoinReserve, fromCurrency.exchange.totalReserveCurrencyReserve);
-      console.log(`Buying ${bridgeAmount} FairShare with ${fromAmount} ${fromCurrency.name}.`);
+      console.log(`Will buy ${bridgeAmount} FairShare with ${fromAmount} ${fromCurrency.name}.`);
       if (fromAmount <= 0 || fromAmount >= fromCurrency.exchange.totalReserveCurrencyReserve) {
 	error('Insufficient reserves', `The ${fromCurrency.name} exchange only has ${fromCurrency.exchange.totalReserveCurrencyReserve} FairShare.`);
       }
     }
   } else {
     document.body.classList.remove('payment-bridge');
-    fromAmount = fromCurrency.computeTransferFee(amount);
+    fromAmount = fromCurrency.computeTransferCost(amount);
   }
   let balanceAfter = fromBalance - fromAmount;
   payButton.textContent = `Pay ${User.get(payee).name} ${amount} ${target.name} using ${fromAmount} ${fromCurrency.name}`;
   if (balanceAfter < 0) error('Insufficient balance', `You only have ${fromBalance} ${fromCurrency.name}.`);
   fromCost.textContent = fromAmount;
   fromAfter.textContent = balanceAfter;
+  if (fail) return [];
+  return [bridgeAmount, amount];
 }
 
-function makeGroupDisplay(key) { // Render the data for a group and it's members.
+function pay() { // Actually pay someone.
+  let [fromAmount, toAmount] = updatePaymentCosts(); // Get the latest costs.
+  const {user, payee, group, currency} = LocalState.states;
+  const fromGroup = Group.get(group);
+  const toGroup = Group.get(currency);
+  if (fromAmount === undefined) return false; // The user will already have been notificied of the problem.
+  if (fromGroup === toGroup) { // Payment within group, in one step.
+    if (!fromGroup.send(toAmount, user, payee)) return displayError(`Unable to make payment from ${fromGroup.name}.`, "Insufficient funds");
+  } else { // Issue a certificate for FairShare currency, and redeem it in the target group.
+    const certificate = fromGroup.issueFairShareCertificate(fromAmount, user, payee);
+    if (!certificate) return displayError(`Unable to issue certficate from ${fromGroup.name}.`, "Insufficient funds");
+    toAmount = toGroup.redeemFairShareCertificate(certificate);
+    if (!toAmount) return displayError(`Unable to pay ${User.get(payee).name} in ${toGroup.name}`);
+  }
+  updateGroupDisplay(document.getElementById(group), group);
+  snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${toAmount} ${toGroup.name} to ${User.get(payee).name}`});
+  return true;
+}
+
+function updateGroupBalance(groupElement, balance = '') { // 0 is '0', but undefined becomes ''.
+  // FIXME: docstring and include membership-based checkbox updates?
+  for (const element of groupElement.querySelectorAll('.balance')) element.textContent = balance;
+}
+
+function updateGroupDisplay(groupElement, key) {
   const {name, img, people, fee, stipend} = Group.get(key);
-  const groupElement = groupTemplate.content.cloneNode(true);
-  const details = groupElement.querySelector('group-details');
-  groupElement.querySelector('li').setAttribute('id', key);
   groupElement.querySelector('expanding-li .mdl-list__item-avatar').setAttribute('src', `images/${img}`);
   groupElement.querySelector('expanding-li .group-name').textContent = name;
   groupElement.querySelector('.fee').textContent = fee;  
@@ -242,16 +265,26 @@ function makeGroupDisplay(key) { // Render the data for a group and it's members
   stipendRow.querySelector('input').setAttribute('id', stipendId);
   stipendRow.querySelector('label').setAttribute('for', stipendId);
   fillCurrencyMenu(key, name, 'ul[data-mdl-for="currencyButton"]'); // For payments menu. Any/all currencies, not just the user's groups.
+  const peopleList = groupElement.querySelector('.people');
+  peopleList.innerHTML = '';
   for (const personKey in people) {
     const {balance, isCandidate = false} = people[personKey];
     const personElement = groupMemberTemplate.content.cloneNode(true);
     const user = User.get(personKey);
+    if (personKey === LocalState.states.user) updateGroupBalance(groupElement, balance);
     personElement.querySelector('.membership-action-label').textContent = isCandidate ? 'endorse' : 'expel';
     personElement.querySelector('row > span').textContent = user.name;
-    details.append(personElement);
-  }
+    peopleList.append(personElement);
+  }  
+}
+
+function makeGroupDisplay(key) { // Render the data for a group and it's members.
+  const groupElement = groupTemplate.content.cloneNode(true).querySelector('li');
+  groupElement.setAttribute('id', key);
+  updateGroupDisplay(groupElement, key);
   groupsList.append(groupElement);
 }
+
 function fillCurrencyMenu(key, name, listSelector) {
   const currencyChoice = paymentTemplate.content.cloneNode(true).firstElementChild;
   currencyChoice.dataset.key = key;

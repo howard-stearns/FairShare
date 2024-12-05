@@ -1,10 +1,18 @@
 // Initial data and local storage setup
 
 // Internally, amounts are in whole numbers (with costs rounded up), and fees taken as a floating point number (e.g., 12% is 0.12)
+function roundUpToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
+  return Math.ceil(number * scale) / scale;
+}
+function roundDownToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
+  return Math.floor(number * scale) / scale;
+}
+
+
 
 class SharedObject { // Stateful object that are replicated among all who have access.
-  static construct({name, key = this.name2key(name), ...properties}) { // Instantiate and record a subclass (which must defined directory).
-    return this.directory[key] = new this({name, ...properties});;
+  static construct({name, key = this.name2key(name), ...properties}) { // Instantiate and record a subclass.
+    return this.directory[key] = new this({name, ...properties}); // Each subclass must define it's own directory.
   }
   constructor(properties) {
     Object.assign(this, properties);
@@ -12,35 +20,78 @@ class SharedObject { // Stateful object that are replicated among all who have a
   static get(key) {
     return this.directory[key];
   }
-  static name2key(name) { // Default key given a name.
+  static name2key(name) { // Default key given a name: camelCase it.
     return name.toLowerCase().replace(/[_\s\-]/g, '');
   }
 }
 
+
 class User extends SharedObject { // Represent a User
   static directory = {}; // Distinct from other SharedObjects.
 }
+
+/*
+  Operations that might be involved in paying someone:
+  - send amount to member: decrement user's balance by amount+fee; increment other member's balance by amount.
+  - buy FairShare from group exchange, and in other group exchange that FairShare for group currency:
+      from group:
+         decrement user's balance by cost
+         buy FairShare with it from exchange
+	 issue fairshare coupon
+       target group (not fairshare):
+         redeem fairshare coupon, selling it for target currency (which could be slightly different than payment amount)
+         increment target member's balance by amount
+       target group is faishare:
+	 redeem faishare coupon, adding it to group member's balance
+  - send FairShare to target group's exchange, and in that group exchange it for group currency:
+      from group (FairShare):
+         decrement user's balance by exchange cost
+         issue fairshare coupon
+      target group:
+        redeem fairshare coupon, selling it for target currency (which could be slight different than payment amount)
+        increment target member's balance by amount
+ */
 
 class Group extends SharedObject { // Represent a group with currency, exchange, candidate and admitted members, etc.
   static directory = {}; // Distsinct from other SharedObjects.
   static list() {
     return Object.keys(this.directory);
   }
-  computeTransferFee(amount) {
+  computeTransferCost(amount) { // Apply the group fee to answer the cost for transfering amount within the group.
     return roundUpToNearest(amount * (1 + this.fee/100));
   }
-  constructor({fee, ...props}) {
-    const number = 100e3;
-    const exchange = new Exchange({totalGroupCoinReserve: number, totalReserveCurrencyReserve: number, fee: fee/100});
+  send(amount, fromMember, toMember) { // cost-amount is taken out of circulation
+    const cost = this.computeTransferCost(amount); // Although the UI has just done this, we need to repeat to be secure.
+    const senderData = this.people[fromMember];
+    if (senderData.balance < cost) return false;
+    senderData.balance -= cost;
+    this.people[toMember].balance += amount;
+    return true;
+  }
+  issueFairShareCertificate(fromAmount, fromMember, payee) {
+    // We don't add to payee's balance in the FairShare group. Instead, redeeming the certificate will be
+    // used in the exchange of another group.
+    //
+    // Although the UI has just computed costs, the computation is repeated here to be secure.
+    const cost = (this === Group.get('fairshare')) ?
+	  this.computeTransferCost(fromAmount) :
+	  this.exchange.buyReserveCurrency(fromAmount);
+    const senderData = this.people[fromMember];
+    if (senderData.balance < cost) return false;
+    senderData.balance -= cost;
+    return {payee, amount:fromAmount};
+  }
+  redeemFairShareCertificate({payee, amount}) {
+    const groupCoinCredit = this.exchange.sellReserveCurrency(amount);
+    const payeeData = this.people[payee];
+    if (!payeeData) return false;
+    payeeData.balance += groupCoinCredit;
+    return groupCoinCredit;
+  }
+  constructor({fee, totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, ...props}) {
+    const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, fee: fee/100});
     super({exchange, fee, ...props});
   }
-}
-
-function roundUpToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
-  return Math.ceil(number * scale) / scale;
-}
-function roundDownToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
-  return Math.floor(number * scale) / scale;
 }
 
 class Exchange { // Implements the math of Uniswap V1.
