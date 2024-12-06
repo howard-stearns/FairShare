@@ -165,54 +165,6 @@ class Exchange { // Implements the math of Uniswap V1.
     return inputAmount;
   }
 }
-/*
-function testGroupCoinTrades({totalReserveCurrencyReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
-  let exchange = new Exchange({totalReserveCurrencyReserve, totalGroupCoinReserve, fee});
-  for (let i=0; i<nCycles; i++) {
-    exchange.buyGroupCoin(1);
-    exchange.sellGroupCoin(1);
-  }
-  let kBefore = totalReserveCurrencyReserve * totalGroupCoinReserve,
-      kAfter = exchange.totalReserveCurrencyReserve * exchange.totalGroupCoinReserve;
-  console.log(fee, kBefore / kAfter);
-}
-function testReserveCurrencyTrades({totalReserveCurrencyReserve = 100, totalGroupCoinReserve = 100, fee=0, nCycles=10}) {
-  let exchange = new Exchange({totalReserveCurrencyReserve, totalGroupCoinReserve, fee});
-  for (let i=0; i<nCycles; i++) {
-    exchange.buyReserveCurrency(1);
-    exchange.sellReserveCurrency(1);
-  }
-  let kBefore = totalReserveCurrencyReserve * totalGroupCoinReserve,
-      kAfter = exchange.totalReserveCurrencyReserve * exchange.totalGroupCoinReserve;
-  console.log(fee, kBefore / kAfter);
-}
-
-testGroupCoinTrades({});
-testGroupCoinTrades({totalGroupCoinReserve: 10000});
-testGroupCoinTrades({fee: 0.003});
-testGroupCoinTrades({totalGroupCoinReserve: 10000, fee: 0.003});
-
-testReserveCurrencyTrades({});
-testReserveCurrencyTrades({totalGroupCoinReserve: 10000});
-testReserveCurrencyTrades({fee: 0.003});
-testReserveCurrencyTrades({totalGroupCoinReserve: 10000, fee: 0.003});
-*/
-/*
-const inputAmount = 1;
-const inputReserve = 1;
-const outputReserve = 1;
-const scale = 1;
-const feeRate = 0;
-const numerator = inputAmount * outputReserve * scale;
-const denominator = inputReserve * scale + inputAmount * scale * (1-feeRate);
-const outputAmount = numerator / denominator;
-const fee = inputAmount * feeRate;
-const rate = outputAmount / inputAmount;
-const nextOutputReserve = outputReserve - outputAmount;
-const nextInputReserve = inputReserve + inputAmount;
-const reserveRatio = nextOutputReserve / nextInputReserve;
-console.log({numerator, denominator, outputAmount, fee, rate, nextInputReserve, nextOutputReserve, reserveRatio});
-*/
 
 User.create({ name: "Alice", img: "alice.jpeg" });
 User.create({ name: "Bob", img: "bob.png" });
@@ -223,11 +175,5 @@ Group.create({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people:
 Group.create({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", people: { carol: {balance: 500}, alice: {balance: 600} } });
 Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
 
-/*
-const testAmount = 20;
-console.log(Group.get('apples').computeTransferFee(testAmount));
-console.log(Group.get('fairshare').exchange.buyReserveCurrency(testAmount), Group.get('fairshare').exchange.buyGroupCoin(testAmount));
-console.log(Group.get('fairshare').exchange.sellReserveCurrency(testAmount), Group.get('fairshare').exchange.sellGroupCoin(testAmount));
-*/
 // For unit testing in node.
-module.exports = {roundUpToNearest, roundDownToNearest, User, Group};
+if (typeof(module) !== 'undefined') module.exports = {roundUpToNearest, roundDownToNearest, User, Group, Exchange};
