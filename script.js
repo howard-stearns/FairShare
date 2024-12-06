@@ -1,7 +1,7 @@
 /*
   TODO:
-  - pay
   - be consistent about naming keys vs actual SharedObjects
+  - stipend
   - widthraw
   - invest, including accounting data
   - vote
@@ -336,7 +336,7 @@ window.addEventListener('popstate', event => {console.log('popstate', event.stat
 window.addEventListener('hashchange', hashChange);
 window.addEventListener('load', () => {
   console.log('loading');
-  Group.list().forEach(makeGroupDisplay);
+  Group.list.forEach(makeGroupDisplay);
   // A hack for our double-labeled switches.
   document.querySelectorAll('.switch-label').forEach(label => label.onclick = (e) => label.nextElementSibling.click(e));
   const params = {}; // Collect any params from query parameters.

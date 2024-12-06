@@ -1,72 +1,67 @@
-// Initial data and local storage setup
+// The model behavior of Users and Groups (including Exchnges).
+// These are the behaviors that would be shared over a network in a real app.
+//
+// There is a test suite that illustrates the use of these, at spec/fairshareSpec.js
+// It can be run with: jasmine
+// after installing with: npm install --global jasmine
 
 // Internally, amounts are in whole numbers (with costs rounded up), and fees taken as a floating point number (e.g., 12% is 0.12)
-function roundUpToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
-  return Math.ceil(number * scale) / scale;
+function roundUpToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
+  return Math.ceil(number * unit) / unit;
 }
-function roundDownToNearest(number, scale = 1) { // Rounds up to nearest whole value of scale.
-  return Math.floor(number * scale) / scale;
+function roundDownToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
+  return Math.floor(number * unit) / unit;
 }
 
 
-
+// There are two subclasses: User and Group, below.
 class SharedObject { // Stateful object that are replicated among all who have access.
-  static construct({name, key = this.name2key(name), ...properties}) { // Instantiate and record a subclass.
+  static create({name, key = this.name2key(name), ...properties}) { // Instantiate and record a subclass.
     return this.directory[key] = new this({name, ...properties}); // Each subclass must define it's own directory.
   }
   constructor(properties) {
     Object.assign(this, properties);
   }
-  static get(key) {
+  static get(key) { // Answer the identified subclass instance, as recorded by contstruct({key}).
     return this.directory[key];
   }
-  static name2key(name) { // Default key given a name: camelCase it.
+  static name2key(name) { // Default key given a name: lowercase concatenated.
     return name.toLowerCase().replace(/[_\s\-]/g, '');
   }
 }
 
 
-class User extends SharedObject { // Represent a User
+class User extends SharedObject { // Represent a User (globally, not specificaly within a single Group).
   static directory = {}; // Distinct from other SharedObjects.
 }
 
-/*
-  Operations that might be involved in paying someone:
-  - send amount to member: decrement user's balance by amount+fee; increment other member's balance by amount.
-  - buy FairShare from group exchange, and in other group exchange that FairShare for group currency:
-      from group:
-         decrement user's balance by cost
-         buy FairShare with it from exchange
-	 issue fairshare coupon
-       target group (not fairshare):
-         redeem fairshare coupon, selling it for target currency (which could be slightly different than payment amount)
-         increment target member's balance by amount
-       target group is faishare:
-	 redeem faishare coupon, adding it to group member's balance
-  - send FairShare to target group's exchange, and in that group exchange it for group currency:
-      from group (FairShare):
-         decrement user's balance by exchange cost
-         issue fairshare coupon
-      target group:
-        redeem fairshare coupon, selling it for target currency (which could be slight different than payment amount)
-        increment target member's balance by amount
- */
-
 class Group extends SharedObject { // Represent a group with currency, exchange, candidate and admitted members, etc.
   static directory = {}; // Distsinct from other SharedObjects.
-  static list() {
+  static get list() { // List all the Groups.
     return Object.keys(this.directory);
   }
+  constructor({fee, totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, ...props}) {
+    const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, fee: fee/100});
+    super({exchange, fee, ...props});
+  }
+
   computeTransferCost(amount) { // Apply the group fee to answer the cost for transfering amount within the group.
     return roundUpToNearest(amount * (1 + this.fee/100));
   }
-  send(amount, fromMember, toMember) { // cost-amount is taken out of circulation
-    const cost = this.computeTransferCost(amount); // Although the UI has just done this, we need to repeat to be secure.
+  computePurchaseCost(amount) { // How much FairShare is needed to exchange for amount of this group's currency.
+    return this.exchange.computeBuyAmount(amount, this.exchange.totalReserveCurrencyReserve, this.exchange.totalGroupCoinReserve);
+  }
+  computeCertificateCost(amount) { // How much of this group's currency is needed to exchange for amount of FairShare.
+    return this.exchange.computeBuyAmount(amount, this.exchange.totalGroupCoinReserve, this.exchange.totalReserveCurrencyReserve);
+  }
+    
+  send(amount, fromMember, toMember) { // Atomically subtract cost fromMember and add amount toMember.
+    const cost = this.computeTransferCost(amount); // Although the UI has just computed this, we need to repeat to be secure.
     const senderData = this.people[fromMember];
     if (senderData.balance < cost) return false;
     senderData.balance -= cost;
     this.people[toMember].balance += amount;
-    return true;
+    return cost;
   }
   issueFairShareCertificate(fromAmount, fromMember, payee) {
     // We don't add to payee's balance in the FairShare group. Instead, redeeming the certificate will be
@@ -82,15 +77,13 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     return {payee, amount:fromAmount};
   }
   redeemFairShareCertificate({payee, amount}) {
-    const groupCoinCredit = this.exchange.sellReserveCurrency(amount);
     const payeeData = this.people[payee];
     if (!payeeData) return false;
+    const groupCoinCredit = (this === Group.get('fairshare')) ?
+	  (amount - this.computeTransferCost(amount)) :
+	  this.exchange.sellReserveCurrency(amount);
     payeeData.balance += groupCoinCredit;
     return groupCoinCredit;
-  }
-  constructor({fee, totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, ...props}) {
-    const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, fee: fee/100});
-    super({exchange, fee, ...props});
   }
 }
 
@@ -221,14 +214,14 @@ const reserveRatio = nextOutputReserve / nextInputReserve;
 console.log({numerator, denominator, outputAmount, fee, rate, nextInputReserve, nextOutputReserve, reserveRatio});
 */
 
-User.construct({ name: "Alice", img: "alice.jpeg" });
-User.construct({ name: "Bob", img: "bob.png" });
-User.construct({ name: "Carol" });
+User.create({ name: "Alice", img: "alice.jpeg" });
+User.create({ name: "Bob", img: "bob.png" });
+User.create({ name: "Carol" });
 let localPersonas = ['alice', 'bob'];
-Group.construct({ name: "Apples", fee: 1, stipend: 1, img: "apples.jpeg", people: { alice: {balance: 100}, bob: {balance: 200} }});
-Group.construct({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people: { bob: {balance: 300}, carol: {balance: 400} } });
-Group.construct({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", people: { carol: {balance: 500}, alice: {balance: 600} } });
-Group.construct({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
+Group.create({ name: "Apples", fee: 1, stipend: 1, img: "apples.jpeg", people: { alice: {balance: 100}, bob: {balance: 200} }});
+Group.create({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people: { bob: {balance: 300}, carol: {balance: 400} } });
+Group.create({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", people: { carol: {balance: 500}, alice: {balance: 600} } });
+Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
 
 /*
 const testAmount = 20;
@@ -236,3 +229,5 @@ console.log(Group.get('apples').computeTransferFee(testAmount));
 console.log(Group.get('fairshare').exchange.buyReserveCurrency(testAmount), Group.get('fairshare').exchange.buyGroupCoin(testAmount));
 console.log(Group.get('fairshare').exchange.sellReserveCurrency(testAmount), Group.get('fairshare').exchange.sellGroupCoin(testAmount));
 */
+// For unit testing in node.
+module.exports = {roundUpToNearest, roundDownToNearest, User, Group};

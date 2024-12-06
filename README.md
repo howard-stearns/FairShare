@@ -65,14 +65,21 @@ Some behavior that is not implemented:
 
 - **swap market-making** - In this PoC, the _directory_ exchanges between group directly at 1:1.
 - **swap to dollars** - ....
+- **locks**
 
 - **group statistics** - e.g., volume of transactions, inequality index, and balance of trade with other group’s currencies. This is ommitted until we're happy with the basic operations.
 - **delegatation** - giving your vote (on candidates, taxes, etc.) to someone else. (Not hard, just not necessary for the basics.)
 - **saving past transactions** - The verified transactions could be signed by the present members and stored for later review.
 - **saving pending transactions** - A submitted signed transaction could be saved until such time as multiple members are present, and then verified. 
+- **secret group membership** - In order to avoid failures, the app checks that the intended payee is a member of the receiving currency's group.
+  - It would be nice to keep your membership secret to those outside the group.
+  - Since there are no locks between groups, a transfer between groups takes two steps that cannot be atomic. It would be more robust if either the second step could not fail, or if the **FIXME**
+
 - **trade ratchet between groups** - Does the wealth-condensation ratchet apply to swaps, such that market makers will "condense" the wealth of the actual group members, and eventually only one market maker holding all the coins of all groups? In principle, this could be avoided by imposing a transaction fee on group swaps. The fee might pay for operations (exclusion mentioned immediately above), and perhaps distributing whats left among the groups. Maybe these rates would be voted on by the groups with some weighting. While the PoC mechanism could easily be modified to support this, it is out of scope for this project.
 - **additional services** - Other services could be facilitated through the groups, both monetary (loans and payment schedules), non-monetary based on group trust (reputation and message attribution) and mixed (marketplace). These are out of scope.
 - **notifications** - An everyday/allday app like this is most convenient if it running in the background, and notifies the user when they have received payment (or other _additioaml services_ activity, see above). Given the construction as a PWA, this is easily added.
+- **app ecosystem integration** - It may be worthwhile to integrate the FairShare app into someone else's appstore, SDK, or other eccosystem/platform mechanism. (E.g., as a World App "mini-app", which also provides grants.) Alternatively, it might be worthwhile to allow other apps to be built into the FairShare platform. (See also, _updates_, below.)
+- **localization** - Languages, writing systems, and convensions from around the world.
 
 - **vaulted group execution** - The module code will not execute if it has been modified, but someone could create a different app that uses the correct module code in a way that allows the app to observe other group members' transactions or votes. We can package the app differently so that this is not possible, but this PoC does not do so.
 - **updates** - A mechanism to update the group code. Note: Swap systems are often not updatable - new versions run alongside older versions.
@@ -85,15 +92,20 @@ Some behavior that is not implemented:
 
 ### Simplifying Assumptions
 
-- In _this_ version, there is no user-to-user networking, and no cryptography. Group interactions are currently simulated:
-  - You can switch between users within the same app page.
-  - There are only a few groups and a few members in each group. When you "vote", the PoC App simulates concurrening votes by the other group memembers in five seconds.
-  - The data is stored locally for use in subsequent sessions, but not between different browsers.
-- The Uniswap V1 model is used for trading between groups: one exchange per group, with reserves in some common currency, and trades priced for constant reserve1 * reserve2.
+1. The Uniswap V1 model is used for trading between groups: one exchange per group, with reserves in some common currency, and trades priced for constant reserve1 * reserve2.
   - As a common "reserve currency", there is a FairShare group that everyone is a member of. (I'm not sure that a universal group is in the spirit of FairShare. Alternatively, there are other ways to do exchanges.)
-  - The FairShare group also has an exchange, but its reserve is in a unit shown as "$". The PoC does not cover how "$" is entered or withdrawn -- just accounted. (A real MVP might need a way to do this, but it presumably creates additional regulatory complications. Maybe something through PayPal or Venmo would work? Or maybe a chain such as Optimism?)
-- Everything is handled in whole numbers, with costs rounded up. (A real MVP would probably use [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt). It might also want to present smaller values to users by working in "pennies" but displaying "dollars" with two places after the decimal.)
-  
+  - Therefore, exhanges between groups involve first exchaning the starting group's coin for Fairshare (or simply withdrawing if the starting group is the FairShare group), and then using that to buy the group coin of the target group. I.e., there are two transactions.
+  - Unlike Unisawp, V1 where the fee for exchange is always 0.3% (0.003 of amount), the exchange fee here is always the same as the agreed group transaction fee. (Is that what is intended? I think if the fee were not the same, people would avoid the fee by exchanging to a low-tax "island" and then exchanging back, no?)
+  - The FairShare group also has an exchange, but the PoC doesn't say what it's reserve currency is, nor provide any way to use it. (A real MVP might provide a way to exchange for dollars, but it presumably creates additional regulatory complications. Maybe something through PayPal/Venmo, World Pay, or Apple Pay would work? Or maybe a chain such as Optimism?)
+2. Everything is handled in whole numbers, with costs rounded up. So with any non-zero fee, there is a minimum 1 unit cost per transaction. (A real MVP would probably use [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt). It might also want to work in "pennies" but displaying "dollars" with two places after the decimal.)
+3. Each group operates independently, without locking. Thus a transfer between groups involves an estimate of the second group's costs in FairShares, and the issuing of a certificate for that amount from the first group's exchange. This means that the final part of the transaction in the second group, could produce slightly more or less than the expected value, if the transaction is large and there are a lot of large exchange transactions occuring at the same time. Becuase of the rounding up in (2), this is unlikely in most cases.
+4. More generally, the estimated costs shown for transactions are estimates based on current conditions. The actioal costs could be slightly different when you push the button.
+
+In _this_ PoC version, there is no device-to-device networking, and no cryptography. Group interactions are currently simulated:
+  - You can switch between users within the same app page to see the effects on others.
+  - This PoC version of the app starts with a few groups and members established, and initial reserve amounts in the exchanges. Changes are persisted locally.
+  - When you "vote", the PoC App simulates concurrening votes by the other group memembers in five seconds.
+
 
 ### State
 
