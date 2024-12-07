@@ -1,5 +1,6 @@
 /*
   TODO:
+  - re-open doesn't work after close
   - be consistent about naming keys vs actual SharedObjects
   - stipend
   - widthraw
@@ -10,45 +11,12 @@
   - genericize (including, dynamically add group-based css and populating users)
  */
 
-const LocalState = { // An object with methods, which tracks the current choices for this user, across history and sessions. See README.md
-  keys: [      // What we track. Checks at runtime.
-    'section', // The "page", "screen", or display we are on. In HTML, the standard is to divide the main element into sections.
-    'user',    // The current user. One could have multiple "alts" or personas, even within the same group.
-    'group',   // What group, if any, are we examining or paying/withdrawing from, or investing in (or last did so).
-    'groupFilter', // Whether to show all, or just those that we are a member of.
-    'payee',       // Who we are paying (or last paid). Only used in sending money.
-    'currency'     // What are currency will the payee be paid in. Only used in sending money.
-  ],
-  // These two are tracked, but we do not add/remove classes for their values (which are from the same set as user & group).
-  unstyled: [ 'payee', 'currency' ],
-
-  merge(states, initializeClasses = false) { // Set all the specified states, update the display, and save.
-    //const debugHref = location.href, debugStates = this.states, debugRetrieve = this.retrieve();
-    const merged = Object.assign({}, this.retrieve(), this.states, states);
-    this.pending = merged; // So that initializers can see other pending values.
-
-    if (initializeClasses) { // Startup: Initialize classes and other display.
-      for (let key in merged) this.update1(key, merged[key]);
-    }
-    
-    let isChanged = false;
-    for (const key in merged) {
-      const valueChanged = this.update1(key, merged[key]);
-      isChanged ||= valueChanged;
-    }
-    this.states = merged; // After update1, and before save.
-    if (isChanged) this.save();
-    //console.log(JSON.stringify(states), JSON.stringify(debugStates), JSON.stringify(debugRetrieve), debugHref, JSON.stringify(merged), isChanged, location.href);
-  },
-  getState(key) { // Return a single current state value by key.
-    return this.states[key];
-  },
-
-  // These are called when their key's value is changed, and are used to set things up to match.
+class App extends ApplicationState {
+  // These are called when their key's value is changed, and are used to set things up to match the change.
   section(state) {
     subtitle.textContent = state;
     if (state === 'pay') setTimeout(updatePaymentCosts);
-  },
+  }
   group(state) {
     let name = Group.get(state)?.name || 'pick one';
     paymeCurrency.textContent = name;
@@ -56,18 +24,18 @@ const LocalState = { // An object with methods, which tracks the current choices
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
     updateQRDisplay({payee: this.pending.user || this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
     if (state) document.getElementById(state).scrollIntoView();
-  },
+  }
   groupFilter(state) { // Set the toggle.
     if (groupFilter.checked === !!state) return;
     groupFilter.click();
-  },
+  }
   payee(state) { // Set the text.
     payee.textContent = User.get(state).name;
-  },
+  }
   currency(state) { // The target group for a payment to someone else.
     const {name} = Group.get(state).name;
     currencyExchanged.textContent = currency.textContent = Group.get(state).name;;
-  },
+  }
   user(state) {  // Set the images, switch user options, and qr code.
     const {name, img} = User.get(state),
 	  picture = `images/${img}`,
@@ -92,48 +60,51 @@ const LocalState = { // An object with methods, which tracks the current choices
 	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu.
       }
     }
-  },
+  }
 
-  // Internal machinery.
-  states: {}, // Current/old values.
+  // Internal app machinery:
+
+  // Each html section is styled as display:none by default, but have more specific css that turns a section on
+  // if the body has a css class that matches that section. By adding one such section class at a
+  // time to the body, we can make exactly one section visible without modifying the dom. (This is much more
+  // efficient than re-generating each section all the time.) Similarly for the other keys other than section.
+  stateChanged(key, old, state) {
+      if (!this.unstyled.includes(key)) {
+      const classList = document.body.classList;
+      if (old) classList.remove(old); // Subtle: can remove('nonexistent'), but remove('') is an error.
+      if (state) classList.add(state);
+    }
+    this.updateURL(key, state); // Make the internal url reflect state. Used by save().
+  }
+  // These two are tracked, but we do not add/remove classes for their values (which are from the same set as user & group).
+  unstyled = [ 'payee', 'currency' ];
+
+  // Local application state is saved, um, locally.
   save() { // Persist for next session, and update browser history, too.
     const string = JSON.stringify(this.states),
 	  href = this.url.href;
     localStorage.setItem('localState', string);
     if (href !== location.href) history.pushState(this.states, document.title, href);
-  },
+  }
   retrieve() { // Get saved state.
     let string = localStorage.getItem('localState');
     return string ? JSON.parse(string) : {groupFilter: 'allGroups', user: 'alice'};
-  },
+  }
+  // The forward/back buttons and the browser history all work, getting you back to a local app state.
+  // Of course, this does NOT undo transactions: it just gets you back to that screen, but with current shared group/user data.
   get url() { // Maintain a url matching location.href
     return this._url ||= new URL(location.href);
-  },
+  }
   updateURL(key, value) { // Set the parameter or fragment in the url, to reflect key/value.
     if (key === 'section') { 
       this.url.hash = value;  // Sections appear in the hash of the url.
     } else {
       this.url.searchParams.set(key, value); // Everything else in the query parameters.
     }
-  },
-  // The sections are display:none by default, but have more specific css that turns a section on
-  // if the body has a css class that matches that section. By adding one such section class at a
-  // time to the body, we can make exactly one section visible without modifying the dom.
-  // Similarly for the other keys.
-  update1(key, state) { // Set state as a class on the body element, after removing the class previously set for that key.
-    if (!this.keys.includes(key)) throw new Error(`Unknown state '${key}', value '${state}'.`);
-    const old = this.states[key];
-    if (state === old) return false;
-    if (!this.unstyled.includes(key)) {
-      const classList = document.body.classList;
-      if (old) classList.remove(old); // Subtle: can remove('nonexistent'), but remove('') is an error.
-      if (state) classList.add(state);
-    }
-    this[key]?.(state); // Call initializer for key if it is defined here.
-    this.updateURL(key, state); // Make the internal url reflect state. Used by save().
-    return true;
   }
-};
+}
+const LocalState = new App();
+
 
 function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code url+picture.
   const params = new URLSearchParams();
@@ -228,21 +199,16 @@ function updatePaymentCosts() {
 
 function pay() { // Actually pay someone.
   let [fromAmount, toAmount] = updatePaymentCosts(); // Get the latest costs.
-  const {user, payee, group, currency} = LocalState.states;
-  const fromGroup = Group.get(group);
-  const toGroup = Group.get(currency);
-  if (fromAmount === undefined) return false; // The user will already have been notificied of the problem.
-  if (fromGroup === toGroup) { // Payment within group, in one step.
-    if (!fromGroup.send(toAmount, user, payee)) return displayError(`Unable to make payment from ${fromGroup.name}.`, "Insufficient funds");
-  } else { // Issue a certificate for FairShare currency, and redeem it in the target group.
-    const certificate = fromGroup.issueFairShareCertificate(fromAmount, user, payee);
-    if (!certificate) return displayError(`Unable to issue certficate from ${fromGroup.name}.`, "Insufficient funds");
-    toAmount = toGroup.redeemFairShareCertificate(certificate);
-    if (!toAmount) return displayError(`Unable to pay ${User.get(payee).name} in ${toGroup.name}`);
+  try {
+    let {group, payee, currency} = LocalState.states;
+    LocalState.pay(fromAmount, toAmount);
+    updateGroupDisplay(document.getElementById(group), group);
+    snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${toAmount} ${Group.get(currency).name} to ${User.get(payee).name}`});
+    return true;
+  } catch (error) {
+    displayError(error.message, error.name);
+    return false;
   }
-  updateGroupDisplay(document.getElementById(group), group);
-  snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${toAmount} ${toGroup.name} to ${User.get(payee).name}`});
-  return true;
 }
 
 function updateGroupBalance(groupElement, balance = '') { // 0 is '0', but undefined becomes ''.
@@ -332,7 +298,7 @@ function filterGroups() {
 function hashChange(event, {...props} = {}) { // A change to a different section.
   LocalState.merge({section: location.hash.slice(1) || 'groups', ...props}, true);
 }
-window.addEventListener('popstate', event => {console.log('popstate', event.state); event.state && LocalState.merge(event.state, true);}); // Triggered by FIXME
+window.addEventListener('popstate', event => event.state && LocalState.merge(event.state, true));
 window.addEventListener('hashchange', hashChange);
 window.addEventListener('load', () => {
   console.log('loading');

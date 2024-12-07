@@ -1,9 +1,10 @@
-// The model behavior of Users and Groups (including Exchnges).
-// These are the behaviors that would be shared over a network in a real app.
+// This file has the general "domain" behavior of FairShare:
+// - It models behavior of Users and Groups (including Exchnges).
+// - These are the behaviors that would be shared over a network in a real app.
+// - Corresponds to "model" in the "MVC", "MVP", and "MVVM" design patterns.
+// - Compare with application.js.
 //
-// There is a test suite that illustrates the use of these, at spec/fairshareSpec.js
-// It can be run with: jasmine
-// after installing with: npm install --global jasmine
+// There is a test suite that illustrates the use of these, at spec/domsinSpec.js
 
 // Internally, amounts are in whole numbers (with costs rounded up), and fees taken as a floating point number (e.g., 12% is 0.12)
 function roundUpToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
@@ -175,5 +176,5 @@ Group.create({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people:
 Group.create({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", people: { carol: {balance: 500}, alice: {balance: 600} } });
 Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
 
-// For unit testing in node.
+// For unit testing in NodeJS.
 if (typeof(module) !== 'undefined') module.exports = {roundUpToNearest, roundDownToNearest, User, Group, Exchange};

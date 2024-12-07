@@ -1,5 +1,10 @@
-const {roundUpToNearest, roundDownToNearest, User, Group, Exchange} = require('../fairshare.js');
-jasmine.getEnv().configure({random: false});
+// Unit tests for domain.js.
+// All tests are run together with: jasmine
+// after installing with: npm install --global jasmine
+
+const {roundUpToNearest, roundDownToNearest, User, Group, Exchange} = require('../domain.js');
+//jasmine.getEnv().configure({random: false}); // Whether or not to randomize the order.
+
 describe('FairShare', function () {
 
   describe('model', function () {
