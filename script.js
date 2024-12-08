@@ -1,5 +1,6 @@
 /*
   TODO:
+  - Should insufficient funds/reserve be thrown from domain rather than app?
   - re-open doesn't work after close
   - be consistent about naming keys vs actual SharedObjects
   - stipend
@@ -104,7 +105,7 @@ class App extends ApplicationState {
   }
 }
 const LocalState = new App();
-
+let localPersonas = ['alice', 'bob']; // fixme?
 
 function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code url+picture.
   const params = new URLSearchParams();
@@ -137,71 +138,38 @@ function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code 
 }
 
 function displayError(message, title = 'Error') { // Show an error dialog to the user.
-  console.error(message);
+  console.error(title, message);
   errorTitle.textContent = title;
   errorMessage.textContent = message;
   errorDialog.showModal();
 }
 
 function updatePaymentCosts() {
-  let {group, currency, user, payee} = LocalState.states;
-  let amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
-  let fromAmount = 0, fail = false, bridgeAmount;
-  const target = Group.get(currency);
-  const fromCurrency = Group.get(group);
-  const fromBalance = fromCurrency?.people[user]?.balance;
-  function error(title, message) {
-    displayError(message, title);
+  const amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
+  const {payee, group, currency} = LocalState.states;
+  try {
+    let [cost, balanceBefore, balanceAfter, exchangeCost] = LocalState.computePayment(amount);
+    payButton.disabled = !amount;
+    payButton.textContent = `Pay ${User.get(payee).name} ${amount} ${Group.get(currency).name} using ${cost} ${Group.get(exchangeCost ? group : currency).name}`;
+    document.body.classList.toggle('payment-bridge', !!exchangeCost);
+    bridgeCost.textContent = exchangeCost;
+    fromCost.textContent = cost;
+    fromBefore.textContent = balanceBefore;
+    fromAfter.textContent = balanceAfter;
+    return [exchangeCost, amount];
+  } catch (error) {
     payButton.disabled = true;
-    fail = true;
-  }
-  fromBefore.textContent = fromBalance;
-  if (!fromCurrency || amount <= 0) {
-    payButton.disabled = true;
-    fromCost.textContent = 0;
-    fromAfter.textContent = fromBalance;
-    document.body.classLst?.remove('payment-bridge');
-    return [];
-  }
-  payButton.disabled = false;
-  if (group !== currency) {
-    console.log('Source and target currencies do not match. Trading through FairShare group.');
-    document.body.classList.add('payment-bridge');
-    const bridgeCurrency = Group.get('fairshare');
-    const bridgeBalance = bridgeCurrency.people[user]?.balance;
-    bridgeAmount = target.exchange.computeBuyAmount(amount, target.exchange.totalReserveCurrencyReserve, target.exchange.totalGroupCoinReserve);
-    if (bridgeAmount <= 0 || bridgeAmount >= bridgeCurrency.exchange.totalReserveCurrencyReserve) {
-      error('Insufficient reserves', `The ${target.name} exchange only has ${bridgeCurrency.exchange.totalReserveCurrencyReserve} FairShare.`);
-    }
-    bridgeCost.textContent = bridgeAmount;
-    if (group === 'fairshare') { // Draw the money directly from your account in the fairshare group.
-      fromAmount = fromCurrency.computeTransferCost(bridgeAmount);
-      console.log(`Will draw ${fromAmount} from FairShare to cover ${bridgeAmount}.`);
-    } else { // Buy fairshare from your selected group's exchange.
-      fromAmount = fromCurrency.exchange.computeBuyAmount(bridgeAmount, fromCurrency.exchange.totalGroupCoinReserve, fromCurrency.exchange.totalReserveCurrencyReserve);
-      console.log(`Will buy ${bridgeAmount} FairShare with ${fromAmount} ${fromCurrency.name}.`);
-      if (fromAmount <= 0 || fromAmount >= fromCurrency.exchange.totalReserveCurrencyReserve) {
-	error('Insufficient reserves', `The ${fromCurrency.name} exchange only has ${fromCurrency.exchange.totalReserveCurrencyReserve} FairShare.`);
-      }
-    }
-  } else {
+    fromCost.textContent = fromAfter.textContent = 0;
     document.body.classList.remove('payment-bridge');
-    fromAmount = fromCurrency.computeTransferCost(amount);
+    displayError(error.message, error.name);
   }
-  let balanceAfter = fromBalance - fromAmount;
-  payButton.textContent = `Pay ${User.get(payee).name} ${amount} ${target.name} using ${fromAmount} ${fromCurrency.name}`;
-  if (balanceAfter < 0) error('Insufficient balance', `You only have ${fromBalance} ${fromCurrency.name}.`);
-  fromCost.textContent = fromAmount;
-  fromAfter.textContent = balanceAfter;
-  if (fail) return [];
-  return [bridgeAmount, amount];
 }
 
 function pay() { // Actually pay someone.
   let [fromAmount, toAmount] = updatePaymentCosts(); // Get the latest costs.
   try {
-    let {group, payee, currency} = LocalState.states;
     LocalState.pay(fromAmount, toAmount);
+    let {group, payee, currency} = LocalState.states;
     updateGroupDisplay(document.getElementById(group), group);
     snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${toAmount} ${Group.get(currency).name} to ${User.get(payee).name}`});
     return true;
