@@ -106,6 +106,8 @@ In _this_ PoC version, there is no device-to-device networking, and no cryptogra
   - This PoC version of the app starts with a few groups and members established, and initial reserve amounts in the exchanges. Changes are persisted locally.
   - When you "vote", the PoC App simulates concurrening votes by the other group memembers in five seconds.
 
+should the intragroup fee be applied to intergroup exchanges? On both the exchange to reserve currency and then again on the exchange of that reserveto the target currency?
+
 
 ### State
 

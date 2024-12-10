@@ -2,8 +2,14 @@
 // All tests are run together with: jasmine
 // after installing with: npm install --global jasmine
 
+// TODO: There can be subtle differences between the various costs depending on whether we go through an exchange.
+//       The numbers involved do not bring out those differences, due to rounding.
+//       We should choose numbers such that the tests will fail if we're using the wrong calculation.
+// TODO: Create a way to test that redeeming a certificate for more than the target reserves will fail.
+
+
 const {roundUpToNearest, roundDownToNearest, User, Group, Exchange} = require('../domain.js');
-jasmine.getEnv().configure({random: false}); // Whether or not to randomize the order.
+//jasmine.getEnv().configure({random: false}); // Whether or not to randomize the order.
 
 describe('FairShare', function () {
 
@@ -283,13 +289,20 @@ describe('FairShare', function () {
 		reserve = 10e3,
 		startingBalanceAlice = 100,
 		startingBalanceBob = 10,
-		targetAmount = 10;
+		targetAmount = 10,
+		isFromFairShare = name1 === 'FairShare',
+		isToFairShare = name2 === 'FairShare';
 	  const g1 = Group.create({name: name1, fee: fee1, people: {alice: {balance: startingBalanceAlice}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
 		g2 = Group.create({name: name2, fee: fee2, people: {bob: {balance: startingBalanceBob}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve});
 	  // Working backwards from targetAmount in g2:
-	  const computedRedemptionCost = g2.computePurchaseCost(targetAmount), // How much FairShare will be needed in g2 to exchanges for targetAmount of g2 currency:
+	  // How much FairShare will be needed in g2 to exchanges for targetAmount of g2 currency:
+	  const computedRedemptionCost = isToFairShare ?
+		g2.computeTransferCost(targetAmount) :
+		g2.computePurchaseCost(targetAmount), 
 		{cost:certificateCost, balance} = g1.issueFairShareCertificate(computedRedemptionCost, 'alice', 'bob', key2, execute),
-		computedCertificateCost = g1.computeCertificateCost(computedRedemptionCost); // What should that cert have cost us in g1.
+		computedCertificateCost = isFromFairShare ?
+		g1.computeTransferCost(computedRedemptionCost) :
+		g1.computeCertificateCost(computedRedemptionCost); // What should that cert have cost us in g1.
 	  const receiver = User.get('bob'),
 		certificate = receiver._pendingCerts[receiver._pendingCerts.length - 1], // Reaching into internals. Not public.
 		credit = execute && g2.redeemFairShareCertificate(certificate);
@@ -330,7 +343,7 @@ describe('FairShare', function () {
 	    it('subtracts cost from sender.', function () {
 	      expect(g1.people.alice.balance).toBe(balance);
 	    });
-	    if (name1 === 'FairShare') {
+	    if (isFromFairShare) {
 	      confirmSendingReserveUnchanged();
 	    } else {
 	      it('adds sending group coin to its reserve.', function () {
@@ -352,7 +365,7 @@ describe('FairShare', function () {
 		expect(g2.people.bob.balance).toBe(startingBalanceBob + credit);
 	      });
 
-	      if (name2 === 'FairShare') {
+	      if (isToFairShare) {
 		confirmReceivingReserveUnchanged();
 	      } else {
 		it('adds FairShare to receiving reserve.', function () {
@@ -375,7 +388,7 @@ describe('FairShare', function () {
 	      reserve1fairshare = g1.exchange.totalReserveCurrencyReserve;
 	      reserve2coin = g2.exchange.totalGroupCoinReserve;
 	      reserve2fairshare = g2.exchange.totalReserveCurrencyReserve;
-	      costForSendingBalance = (name1 === 'FairShare') ?
+	      costForSendingBalance = (isFromFairShare) ?
 		g1.computeTransferCost(startingBalanceAlice) :
 		g1.computeCertificateCost(startingBalanceAlice);
 	    });
@@ -394,10 +407,14 @@ describe('FairShare', function () {
 		       confirmBalancesUnchanged);
 	    checkError('if sender has insufficient balance',
 		       () => g1.issueFairShareCertificate(startingBalanceAlice, 'alice', 'bob', key2, execute),
-		       () => {
-			 return {name: 'InsufficientFunds', balance: balanceAlice, cost: costForSendingBalance, groupName: name1};
-		       },
+		       () => ({name: 'InsufficientFunds', balance: balanceAlice, cost: costForSendingBalance, groupName: name1}),
 		       confirmBalancesUnchanged);
+	    if (!isFromFairShare && execute) {
+	      checkError('if sending exchange does not have enough reserves.',
+			 () => g1.issueFairShareCertificate(2 * reserve, 'alice', 'bob', key2, execute),
+			 () => ({name: 'InsufficientReserves', reserveCurrency: true, reserve: reserve1fairshare}),
+			 confirmBalancesUnchanged);
+	    }
 	    checkError('if certificate is reused',
 		       () => g2.redeemFairShareCertificate(certificate),
 		       () => (execute ? {name: 'ReusedCertificate', certificate} : {}),

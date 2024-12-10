@@ -106,8 +106,9 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     const receiverData = this.people[payee];
     if (!receiverData) this.throwUnknownUser(payee);
 
-    const balance = this.checkSenderBalance(cost, user, execute);
+    const {senderData, balance} = this.checkSenderBalance(cost, user, execute);
     if (execute) {
+      senderData.balance = balance;
       receiverData.balance += amount;
     }
     return {cost, balance};
@@ -123,7 +124,7 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     const receiverData = User.get(payee);                        // General User object. We might not be a member of currency to get data there.
     if (!receiverData) this.throwUnknownUser(payee, 'any');
 
-    const balance = this.checkSenderBalance(cost, user, execute); // As for send. Throws error if insufficient balance.
+    const {senderData, balance} = this.checkSenderBalance(cost, user, execute); // As for send. Throws error if insufficient balance.
     if (execute) { // We have completed our tests and deducted from sender balance.
       if (!fromFairShare) {
 	const cost2 = this.exchange.buyReserveCurrency(amount);
@@ -131,6 +132,7 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
       }
       const number = receiverData.nextCertificateNumber;
       receiverData.receiveCertificate({payee, amount, currency, number}); // Currency is advisory. See redeem...
+      senderData.balance = balance;
     }
     return {cost, balance};                                      // As for send.
   }
@@ -152,14 +154,14 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     // might return true if we're not the "current" fairshare group. The following doesn't have that issue.
     return this.name === 'FairShare';
   }
-  checkSenderBalance(cost, user, execute) { // Return user's balance after subtracting cost, persisting it if execute, and throwing if insufficient or missing.
+  checkSenderBalance(cost, user) { // Return user's data and balance after subtracting cost, and throwing if insufficient or missing.
     const senderData = this.people[user];
     if (!senderData) this.throwUnknownUser(user);
     let {balance} = senderData;    
     if (balance < cost) this.throwInsufficientFunds(balance, cost);
     balance -= cost;
-    if (execute) senderData.balance = balance;
-    return balance;
+    // We cannot assign new balance in senderData here, because there might be tests that come after this call. (E.g., when exchange is involved.)
+    return {senderData, balance};
   }
   throwUnknownUser(user, groupName = this.name) {
     throw new UnknownUser({user, groupName});
@@ -206,11 +208,17 @@ class Exchange { // Implements the math of Uniswap V1.
     const kAfter = totalReserveCurrencyReserve * totalGroupCoinReserve;
     console.log({label, inputAmount, outputAmount, fee, rate, inputReserve, outputReserve, totalReserveCurrencyReserve, totalGroupCoinReserve, kBefore, kAfter});
   }
+  checkReserves(outputAmount, reserveCurrency) {
+    let reserve = reserveCurrency ? this.totalReserveCurrencyReserve : this.totalGroupCoinReserve;
+    if (outputAmount >= reserve) throw new InsufficientReserves({outputAmount, reserve, reserveCurrency});
+  }
+  
   sellGroupCoin(amount) { // User sells amount of group currency to reserves, removing computed outputAmount of reserve currency from reserves.
     const inputAmount = amount;
     const inputReserve = this.totalGroupCoinReserve;
     const outputReserve = this.totalReserveCurrencyReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
+    this.checkReserves(outputAmount, true);
     this.totalGroupCoinReserve += inputAmount;
     this.totalReserveCurrencyReserve -= outputAmount;
     this.reportTransaction({label: 'sellGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
@@ -221,6 +229,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const inputReserve = this.totalReserveCurrencyReserve;
     const outputReserve = this.totalGroupCoinReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
+    this.checkReserves(outputAmount, false);
     this.totalGroupCoinReserve -= outputAmount;
     this.totalReserveCurrencyReserve += inputAmount;
     this.reportTransaction({label: 'sellPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
@@ -231,6 +240,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const outputReserve = this.totalGroupCoinReserve;
     const inputReserve = this.totalReserveCurrencyReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
+    this.checkReserves(outputAmount, false);
     this.totalReserveCurrencyReserve += inputAmount;
     this.totalGroupCoinReserve -= outputAmount;
     this.reportTransaction({label: 'buyGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});
@@ -241,6 +251,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const outputReserve = this.totalReserveCurrencyReserve;
     const inputReserve = this.totalGroupCoinReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
+    this.checkReserves(outputAmount, true);
     this.totalReserveCurrencyReserve -= outputAmount;
     this.totalGroupCoinReserve += inputAmount;
     this.reportTransaction({label: 'buyPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});
