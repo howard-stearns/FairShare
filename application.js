@@ -9,9 +9,6 @@
 
 // There is a test suite that illustrates the use of these, at spec/applicationSpec.js
 
-class InsufficientFunds extends Error {}
-class InsufficientReserves extends InsufficientFunds {}
-
 class ApplicationState { // The specific implementation subclasses this.
   keys = [      // The various state names or dimensions that we track. Checks at runtime.
     'section', // The "page", "screen", or display we are on. In HTML, the standard is to divide the main element into sections.
@@ -107,4 +104,7 @@ class ApplicationState { // The specific implementation subclasses this.
 };
 
 // For unit testing in NodeJS.
-if (typeof(module) !== 'undefined') module.exports = {ApplicationState};
+if (typeof(module) !== 'undefined') {
+  var {User, Group, UnknownUser, InsufficientFunds, InsufficientReserves} = require('./domain.js');
+  module.exports = {ApplicationState};
+}

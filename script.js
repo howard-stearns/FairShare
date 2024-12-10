@@ -3,6 +3,7 @@
   - Should insufficient funds/reserve be thrown from domain rather than app?
   - re-open doesn't work after close
   - be consistent about naming keys vs actual SharedObjects
+  - show reserves in group display
   - stipend
   - widthraw
   - invest, including accounting data

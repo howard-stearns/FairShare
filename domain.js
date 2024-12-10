@@ -14,6 +14,24 @@ function roundDownToNearest(number, unit = 1) { // Rounds up to nearest whole va
   return Math.floor(number * unit) / unit;
 }
 
+// Domain operations must do their own error checking, because:
+// 1. It would be insecure to rely on callers to do it.
+// 2. Here we know the particulars of what went wrong.
+// So, we gather the particulars here rather than some generic invalid or coded return value.
+class FairShareError extends Error {
+  constructor({name, ...properties}) {
+    // In some networking/replication models, domain operations must return the same values,
+    // and so we cannot produce localized error message strings here.
+    super(JSON.stringify(properties));
+    if (!name) name = this.constructor.name; // Default Error.name isn't helpful, and cannot use 'this' before calling super.
+    Object.assign(this, {name, ...properties});
+  }
+}
+class UnknownUser extends FairShareError { }
+class InsufficientFunds extends FairShareError { }
+class InsufficientReserves extends InsufficientFunds { }
+class ReusedCertificate extends FairShareError { }
+
 
 // There are two subclasses: User and Group, below.
 class SharedObject { // Stateful object that are replicated among all who have access.
@@ -34,6 +52,24 @@ class SharedObject { // Stateful object that are replicated among all who have a
 
 class User extends SharedObject { // Represent a User (globally, not specificaly within a single Group).
   static directory = {}; // Distinct from other SharedObjects.
+  constructor(properties) {
+    super(properties);
+    this._pendingCerts = [];
+    this._certIssues = 0;
+    this._certsRedeemed = -1;
+  }
+  get nextCertificateNumber() {
+    return this._certIssues++;
+  }
+  receiveCertificate(certificate) {
+    this._pendingCerts.push(certificate);
+  }
+  consumeCertificate(certificate) {
+    const {amount, number} = certificate;
+    if (number <= this._certsRedeemed) throw new ReusedCertificate({certificate});
+    this._certsRedeemed = number;
+    return amount;
+  }
 }
 
 class Group extends SharedObject { // Represent a group with currency, exchange, candidate and admitted members, etc.
@@ -42,6 +78,7 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     return Object.keys(this.directory);
   }
   constructor({fee, totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, ...props}) {
+    // fee here is a percent, rather than an number less than 1.
     const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, fee: fee/100});
     super({exchange, fee, ...props});
   }
@@ -55,36 +92,71 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
   computeCertificateCost(amount) { // How much of this group's currency is needed to exchange for amount of FairShare.
     return this.exchange.computeBuyAmount(amount, this.exchange.totalGroupCoinReserve, this.exchange.totalReserveCurrencyReserve);
   }
-    
-  send(amount, fromMember, toMember) { // Atomically subtract cost fromMember and add amount toMember.
-    const cost = this.computeTransferCost(amount); // Although the UI has just computed this, we need to repeat to be secure.
-    const senderData = this.people[fromMember];
-    if (senderData.balance < cost) return false;
-    senderData.balance -= cost;
-    this.people[toMember].balance += amount;
-    return cost;
+
+  send(amount, user, payee, execute = false) {
+    // Return {cost, balance}, where balance is what would remain for current user after sending.
+    // If execute, atomically subtracts cost from user balance and adds amount to payee. (cost - amount) is removed from circulation.
+    const cost = this.computeTransferCost(amount);
+
+    const receiverData = this.people[payee];
+    if (!receiverData) this.throwUnknownUser(payee);
+
+    const balance = this.checkSenderBalance(cost, user, execute);
+    if (execute) {
+      receiverData.balance += amount;
+    }
+    return {cost, balance};
   }
-  issueFairShareCertificate(fromAmount, fromMember, payee) {
-    // We don't add to payee's balance in the FairShare group. Instead, redeeming the certificate will be
-    // used in the exchange of another group.
-    //
-    // Although the UI has just computed costs, the computation is repeated here to be secure.
-    const cost = (this === Group.get('fairshare')) ?
-	  this.computeTransferCost(fromAmount) :
-	  this.exchange.buyReserveCurrency(fromAmount);
-    const senderData = this.people[fromMember];
-    if (senderData.balance < cost) return false;
-    senderData.balance -= cost;
-    return {payee, amount:fromAmount};
+  issueFairShareCertificate(amount, user, payee, currency, execute = false) {
+    // Return {cost, balance), where balance is what would remain for current user after sending.
+    // If execute, atomically subtracts cost from member balance and adds a cert for FairShares to payee.
+    // (The cert will be redeemed by the user.)
+    const fromFairShare = this === Group.get('fairshare');
+    const cost = fromFairShare ?
+	  this.computeTransferCost(amount) :                     // As for send.
+	  this.computeCertificateCost(amount);                   // Different from send. (And don't adjust reserves yet, because we haven't finished tests.)
+
+    const receiverData = User.get(payee);                        // General User object. We might not be a member of currency to get data there.
+    if (!receiverData) this.throwUnknownUser(payee, 'any');
+
+    const balance = this.checkSenderBalance(cost, user, execute); // As for send. Throws error if insufficient balance.
+    if (execute) { // We have completed our tests and deducted from sender balance.
+      if (!fromFairShare) {
+	const cost2 = this.exchange.buyReserveCurrency(amount);
+	if (cost2 !== cost) throw new FairShareError(`Actual cost ${cost2} does not match computed cost ${cost}. This should never happen.`);
+      }
+      const number = receiverData.nextCertificateNumber;
+      receiverData.receiveCertificate({payee, amount, currency, number}); // Currency is advisory. See redeem...
+    }
+    return {cost, balance};                                      // As for send.
   }
-  redeemFairShareCertificate({payee, amount}) {
+  redeemFairShareCertificate(cert) { // Redeem cert, adding to balance (and reserves if appropriate). Error if bogus (including reused cert).
+    const {payee} = cert;
+    const user = User.get(payee);
     const payeeData = this.people[payee];
-    if (!payeeData) return false;
+    if (!payeeData || !user) this.throwUnknownUser(payee);
+    const amount = user.consumeCertificate(cert);
     const groupCoinCredit = (this === Group.get('fairshare')) ?
 	  (amount - this.computeTransferCost(amount)) :
 	  this.exchange.sellReserveCurrency(amount);
     payeeData.balance += groupCoinCredit;
     return groupCoinCredit;
+  }
+
+  checkSenderBalance(cost, user, execute) { // Return user's balance after subtracting cost, persisting it if execute, and throwing if insufficient or missing.
+    const senderData = this.people[user];
+    if (!senderData) this.throwUnknownUser(user);
+    let {balance} = senderData;    
+    if (balance < cost) this.throwInsufficientFunds(balance, cost);
+    balance -= cost;
+    if (execute) senderData.balance = balance;
+    return balance;
+  }
+  throwUnknownUser(user, groupName = this.name) {
+    throw new UnknownUser({user, groupName});
+  }
+  throwInsufficientFunds(balance, cost) {
+    throw new InsufficientFunds({balance, cost, groupName: this.name});
   }
 }
 
