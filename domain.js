@@ -86,10 +86,15 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
   computeTransferCost(amount) { // Apply the group fee to answer the cost for transfering amount within the group.
     return roundUpToNearest(amount * (1 + this.fee/100));
   }
-  computePurchaseCost(amount) { // How much FairShare is needed to exchange for amount of this group's currency.
+  computeReceiveCredit(amount) { // Apply the group fee to answer how much should be credit for a given amount.
+    return amount - roundUpToNearest(amount * this.fee/100);
+  }
+  computePurchaseCost(amount) { // How much reserve currency is needed to exchange for amount of this group's currency.
+    // For all groups EXCEPT the FairShare group, the reserve currency is FairShare.
+    // This method always produces reserve currency costs, whatever that currency is.
     return this.exchange.computeBuyAmount(amount, this.exchange.totalReserveCurrencyReserve, this.exchange.totalGroupCoinReserve);
   }
-  computeCertificateCost(amount) { // How much of this group's currency is needed to exchange for amount of FairShare.
+  computeCertificateCost(amount) { // How much of this group's currency is needed to exchange for amount of reserve currency.
     return this.exchange.computeBuyAmount(amount, this.exchange.totalGroupCoinReserve, this.exchange.totalReserveCurrencyReserve);
   }
 
@@ -111,11 +116,10 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     // Return {cost, balance), where balance is what would remain for current user after sending.
     // If execute, atomically subtracts cost from member balance and adds a cert for FairShares to payee.
     // (The cert will be redeemed by the user.)
-    const fromFairShare = this === Group.get('fairshare');
+    const fromFairShare = this.isFairShare;
     const cost = fromFairShare ?
 	  this.computeTransferCost(amount) :                     // As for send.
 	  this.computeCertificateCost(amount);                   // Different from send. (And don't adjust reserves yet, because we haven't finished tests.)
-
     const receiverData = User.get(payee);                        // General User object. We might not be a member of currency to get data there.
     if (!receiverData) this.throwUnknownUser(payee, 'any');
 
@@ -136,13 +140,18 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
     const payeeData = this.people[payee];
     if (!payeeData || !user) this.throwUnknownUser(payee);
     const amount = user.consumeCertificate(cert);
-    const groupCoinCredit = (this === Group.get('fairshare')) ?
-	  (amount - this.computeTransferCost(amount)) :
+    const groupCoinCredit = this.isFairShare ?
+	  this.computeReceiveCredit(amount) :
 	  this.exchange.sellReserveCurrency(amount);
     payeeData.balance += groupCoinCredit;
     return groupCoinCredit;
   }
 
+  get isFairShare() { // Are we the FairShare group?
+    // Subtle: During testing, we may create many "fairshare" groups with odd lifetimes, such that (this === Group.get('fairshare')
+    // might return true if we're not the "current" fairshare group. The following doesn't have that issue.
+    return this.name === 'FairShare';
+  }
   checkSenderBalance(cost, user, execute) { // Return user's balance after subtracting cost, persisting it if execute, and throwing if insufficient or missing.
     const senderData = this.people[user];
     if (!senderData) this.throwUnknownUser(user);

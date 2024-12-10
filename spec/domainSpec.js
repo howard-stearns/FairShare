@@ -277,208 +277,157 @@ describe('FairShare', function () {
 	});
       });
       describe('sending between groups', function () {
-	describe('not FairShare', function () {
-	  function sendTest(execute) {
-	    const name1 = 'Group1',
-		  name2 = 'Group2',
-		  fee1 = 1,
-		  fee2 = 2,
-		  reserve = 10e3,
-		  startingBalanceAlice = 100,
-		  startingBalanceBob = 10,
-		  targetAmount = 10;
-	    //let g1, g2, computedRedemptionCost, computedCertificateCost, certificateCost, balance;
-	    //beforeEach(function () {
-	    const g1 = Group.create({name: name1, fee: fee1, people: {alice: {balance: startingBalanceAlice}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve});
-	    const g2 = Group.create({name: name2, fee: fee2, people: {bob: {balance: startingBalanceBob}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve});
-	    // Working backwards from targetAmount in g2:
-	    const computedRedemptionCost = g2.computePurchaseCost(targetAmount); // How much FairShare will be needed in g2 to exchanges for targetAmount of g2 currency:
-	    const costs = g1.issueFairShareCertificate(computedRedemptionCost, 'alice', 'bob', 'group2', execute);
-	    const certificateCost = costs.cost;
-	    const balance = costs.balance;
-	    const computedCertificateCost = g1.computeCertificateCost(computedRedemptionCost); // What should that cert have cost us in g1.
-	    //	    });
-	    const receiver = User.get('bob'),
-		  certificate = receiver._pendingCerts[receiver._pendingCerts.length - 1], // Reaching into internals. Not public.
-		  credit = execute && g2.redeemFairShareCertificate(certificate);
+	function sendTest({execute, name1 = 'Group1', name2 = 'Group2', key2 = name2.toLowerCase()}) {
+	  const fee1 = 1,
+		fee2 = 2,
+		reserve = 10e3,
+		startingBalanceAlice = 100,
+		startingBalanceBob = 10,
+		targetAmount = 10;
+	  const g1 = Group.create({name: name1, fee: fee1, people: {alice: {balance: startingBalanceAlice}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
+		g2 = Group.create({name: name2, fee: fee2, people: {bob: {balance: startingBalanceBob}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve});
+	  // Working backwards from targetAmount in g2:
+	  const computedRedemptionCost = g2.computePurchaseCost(targetAmount), // How much FairShare will be needed in g2 to exchanges for targetAmount of g2 currency:
+		{cost:certificateCost, balance} = g1.issueFairShareCertificate(computedRedemptionCost, 'alice', 'bob', key2, execute),
+		computedCertificateCost = g1.computeCertificateCost(computedRedemptionCost); // What should that cert have cost us in g1.
+	  const receiver = User.get('bob'),
+		certificate = receiver._pendingCerts[receiver._pendingCerts.length - 1], // Reaching into internals. Not public.
+		credit = execute && g2.redeemFairShareCertificate(certificate);
 
-	    let balanceAlice = startingBalanceAlice, balanceBob = startingBalanceBob, reserve1coin = reserve, reserve1fairshare = reserve;
-	    function checkBalances() {
-	      it('does not effect balances.', function () {
-		expect(g1.exchange.totalGroupCoinReserve).toBe(reserve1coin);
-		expect(g1.exchange.totalReserveCurrencyReserve).toBe(reserve1fairshare);
-		expect(g1.people.alice.balance).toBe(balanceAlice);
-		expect(g2.people.bob.balance).toBe(balanceBob);
-	      });
-	    }
-	    //console.log({computedRedemptionCost, computedCertificateCost, certificateCost, balance,});
-	    it('does not require receiver to be in sending group or sender to be in receiving group.', function () {
-	      expect(g1.people.bob).toBeUndefined(); // In this case
-	      expect(g2.people.alice).toBeUndefined();
+	  let balanceAlice = startingBalanceAlice, balanceBob = startingBalanceBob,
+	      reserve1coin = reserve, reserve1fairshare = reserve,
+	      reserve2coin = reserve, reserve2fairshare = reserve;
+	  function confirmSendingReserveUnchanged() {
+	    it('does not effect sending reserve.', function () {
+	      expect(g1.exchange.totalGroupCoinReserve).toBe(reserve1coin);
+	      expect(g1.exchange.totalReserveCurrencyReserve).toBe(reserve1fairshare);
 	    });
-	    it('answers cost and resulting balance.', function () {
-	      expect(certificateCost).toBe(computedCertificateCost);
-	      expect(balance).toBe(startingBalanceAlice - certificateCost);
+	  }
+	  function confirmReceivingReserveUnchanged() {
+	    it('does not effect receiving reserve.', function () {
+	      expect(g2.exchange.totalGroupCoinReserve).toBe(reserve2coin);
+	      expect(g2.exchange.totalReserveCurrencyReserve).toBe(reserve2fairshare);
 	    });
-	    if (execute) {
-	      it('subtracts cost from sender.', function () {
-		expect(g1.people.alice.balance).toBe(balance);
-	      });
+	  }
+	  function confirmBalancesUnchanged() {
+	    confirmSendingReserveUnchanged();
+	    confirmReceivingReserveUnchanged();
+	    it('does not effect balances.', function () {
+	      expect(g1.people.alice.balance).toBe(balanceAlice);
+	      expect(g2.people.bob.balance).toBe(balanceBob);
+	    });
+	  }
+	  //console.log({computedRedemptionCost, computedCertificateCost, certificateCost, balance,});
+	  it('does not require receiver to be in sending group or sender to be in receiving group.', function () {
+	    expect(g1.people.bob).toBeUndefined(); // In this case
+	    expect(g2.people.alice).toBeUndefined();
+	  });
+	  it('answers cost and resulting balance.', function () {
+	    expect(certificateCost).toBe(computedCertificateCost);
+	    expect(balance).toBe(startingBalanceAlice - certificateCost);
+	  });
+	  if (execute) {
+	    it('subtracts cost from sender.', function () {
+	      expect(g1.people.alice.balance).toBe(balance);
+	    });
+	    if (name1 === 'FairShare') {
+	      confirmSendingReserveUnchanged();
+	    } else {
 	      it('adds sending group coin to its reserve.', function () {
 		expect(g1.exchange.totalGroupCoinReserve).toBe(reserve + computedCertificateCost);
 	      });
 	      it('subtracts FairShare from sending reserve.', function () {
 		expect(g1.exchange.totalReserveCurrencyReserve).toBe(reserve - computedRedemptionCost);
 	      });
-	      describe('redemption', function () {
-		it('generates certificate for requested amount.', function () {
-		  const {payee, amount, currency} = certificate;
-		  expect(amount).toBe(computedRedemptionCost);
-		  expect(payee).toBe('bob');
-		  expect(currency).toBe('group2');
-		});
-		it('adds credit to receiver when certificate is redeemed.', function () {
-		  expect(credit).toBeLessThanOrEqual(targetAmount); // Equal in almost all cases.
-		  expect(g2.people.bob.balance).toBe(startingBalanceBob + credit);
-		});
+	    }
+	    describe('redemption', function () {
+	      it('generates certificate for requested amount.', function () {
+		const {payee, amount, currency} = certificate;
+		expect(amount).toBe(computedRedemptionCost);
+		expect(payee).toBe('bob');
+		expect(currency).toBe(key2);
+	      });
+	      it('adds credit to receiver when certificate is redeemed.', function () {
+		expect(credit).toBeLessThanOrEqual(targetAmount); // Equal in almost all cases.
+		expect(g2.people.bob.balance).toBe(startingBalanceBob + credit);
+	      });
+
+	      if (name2 === 'FairShare') {
+		confirmReceivingReserveUnchanged();
+	      } else {
 		it('adds FairShare to receiving reserve.', function () {
 		  expect(g2.exchange.totalReserveCurrencyReserve).toBe(reserve + certificate.amount);
 		});
 		it('subtracts receiving group coin from its reserve.', function () {
 		  expect(g2.exchange.totalGroupCoinReserve).toBe(reserve - credit);
 		});
-	      });
-	    } else {
-	      checkBalances();
-	    }
-	    describe('error conditions', function () {
-	      beforeAll(function () {
-		balanceAlice = g1.people.alice.balance;
-		balanceBob = g2.people.bob.balance;
-		reserve1coin = g1.exchange.totalGroupCoinReserve;
-		reserve1fairshare = g1.exchange.totalReserveCurrencyReserve;
-	      });
-	      afterAll(function () { balanceAlice = startingBalanceAlice, balanceBob = startingBalanceBob, reserve1coin = reserve, reserve1fairshare = reserve; });
-	      checkError('if sender not in group', 
-			 () => g1.issueFairShareCertificate(targetAmount, 'missing', 'bob', 'group2', execute),
-			 () => ({name: 'UnknownUser', user: 'missing', groupName: name1}),
-			 checkBalances);
-	      checkError('if receiver not in group',
-			 () => g2.issueFairShareCertificate(targetAmount, 'alice', 'missing', 'group2', execute),
-			 () => ({name: 'UnknownUser', user: 'missing', groupName: 'any'}),
-			 checkBalances);
-	      checkError('if sender has insufficient balance',
-			 () => g1.issueFairShareCertificate(startingBalanceAlice, 'alice', 'bob', 'group2', execute),
-			 () => {
-			   const cost = g1.computeCertificateCost(startingBalanceAlice),
-				 balance = g1.people.alice.balance;
-			   return {name: 'InsufficientFunds', balance, cost, groupName: name1};
-			 },
-			 checkBalances);
-	      checkError('if certificate is reused',
-			 () => g2.redeemFairShareCertificate(certificate),
-			 () => (execute ? {name: 'ReusedCertificate', certificate} : {}),
-			 checkBalances);
+	      }
 	    });
+	  } else {
+	    confirmBalancesUnchanged();
 	  }
+	  describe('error conditions', function () {
+	    let costForSendingBalance;
+	    beforeAll(function () {
+	      balanceAlice = g1.people.alice.balance;
+	      balanceBob = g2.people.bob.balance;
+	      reserve1coin = g1.exchange.totalGroupCoinReserve;
+	      reserve1fairshare = g1.exchange.totalReserveCurrencyReserve;
+	      reserve2coin = g2.exchange.totalGroupCoinReserve;
+	      reserve2fairshare = g2.exchange.totalReserveCurrencyReserve;
+	      costForSendingBalance = (name1 === 'FairShare') ?
+		g1.computeTransferCost(startingBalanceAlice) :
+		g1.computeCertificateCost(startingBalanceAlice);
+	    });
+	    afterAll(function () {
+	      balanceAlice = startingBalanceAlice, balanceBob = startingBalanceBob,
+	      reserve1coin = reserve, reserve1fairshare = reserve;
+	      reserve2coin = reserve, reserve2fairshare = reserve;
+	    });
+	    checkError('if sender not in group', 
+		       () => g1.issueFairShareCertificate(targetAmount, 'missing', 'bob', key2, execute),
+		       () => ({name: 'UnknownUser', user: 'missing', groupName: name1}),
+		       confirmBalancesUnchanged);
+	    checkError('if receiver not in group',
+		       () => g2.issueFairShareCertificate(targetAmount, 'alice', 'missing', key2, execute),
+		       () => ({name: 'UnknownUser', user: 'missing', groupName: 'any'}),
+		       confirmBalancesUnchanged);
+	    checkError('if sender has insufficient balance',
+		       () => g1.issueFairShareCertificate(startingBalanceAlice, 'alice', 'bob', key2, execute),
+		       () => {
+			 return {name: 'InsufficientFunds', balance: balanceAlice, cost: costForSendingBalance, groupName: name1};
+		       },
+		       confirmBalancesUnchanged);
+	    checkError('if certificate is reused',
+		       () => g2.redeemFairShareCertificate(certificate),
+		       () => (execute ? {name: 'ReusedCertificate', certificate} : {}),
+		       confirmBalancesUnchanged);
+	  });
+	}
+	describe('not FairShare', function () {
 	  describe('dry run', function () {
-	    sendTest(false);
+	    sendTest({execute: false});
 	  });
 	  describe('executing run', function () {
-	    sendTest(true);
+	    sendTest({execute: true});
 	  });
 	});
-      // describe('sending from FairShare group', function () { // Almost the same as between other groups, but sending group does not use exchange.
-      // // 	const key1 = 'fairshare',
-      // // 	      key2 = 'group2',
-      // // 	      fee1 = 1,
-      // // 	      fee2 = 2,
-      // // 	      reserve = 10e3,
-      // // 	      startingBalanceA = 100,
-      // // 	      startingBalanceB = 10,
-      // // 	      g1 = Group.create({key: key1, fee: fee1, people: {a: {balance: startingBalanceA}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
-      // // 	      g2 = Group.create({key: key2, fee: fee2, people: {b: {balance: startingBalanceB}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
-      // // 	      targetAmount = 10,
-      // // 	      computedRedemptionCost = g2.computePurchaseCost(targetAmount),
-      // // 	      computedCertificateCost = g1.computeTransferCost(computedRedemptionCost),
-      // // 	      certificate = g1.issueFairShareCertificate(computedRedemptionCost, 'a', 'b'),
-      // // 	      certificateCost = startingBalanceA - g1.people.a.balance,
-      // // 	      credit = g2.redeemFairShareCertificate(certificate),
-      // // 	      redemptionCredit = g2.people.b.balance - startingBalanceB;
-      // // 	it('does not require receiver to be in sending group or sender to be in receiving group.', function () {
-      // // 	  expect(g1.people.b).toBeUndefined(); // In this case
-      // // 	  expect(g2.people.a).toBeUndefined();
-      // // 	});
-      // // 	it('generates certificate for requested amount.', function () {
-      // // 	  expect(certificate.amount).toBe(computedRedemptionCost);
-      // // 	});
-      // // 	it('subtracts cost from sender.', function () {
-      // // 	  expect(certificateCost).toBe(computedCertificateCost);
-      // // 	});
-      // // 	it('does not change sending group coin to its reserve.', function () {
-      // // 	  expect(g1.exchange.totalGroupCoinReserve).toBe(reserve);
-      // // 	});
-      // // 	it('does not change FairShare in sending reserve.', function () {
-      // // 	  expect(g1.exchange.totalReserveCurrencyReserve).toBe(reserve);
-      // // 	});
-      // // 	it('adds credit to receiver when certificate is redeemed.', function () {
-      // // 	  expect(redemptionCredit).toBeLessThanOrEqual(targetAmount); // Equal in almost all cases.
-      // // 	});
-      // // 	it('adds FairShare to receiving reserve.', function () {
-      // // 	  expect(g2.exchange.totalReserveCurrencyReserve).toBe(reserve + certificate.amount);
-      // // 	});
-      // // 	it('subtracts receiving group coin from its reserve.', function () {
-      // // 	  expect(g2.exchange.totalGroupCoinReserve).toBe(reserve - redemptionCredit);
-      // // 	});
-      // // });
-      // // describe('sending to FairShare group', function () { // Almost the same as between other groups, but receiving group does not use exchange.
-      // // 	const key1 = 'group1',
-      // // 	      key2 = 'fairshare',
-      // // 	      fee1 = 1,
-      // // 	      fee2 = 2,
-      // // 	      reserve = 10e3,
-      // // 	      startingBalanceA = 100,
-      // // 	      startingBalanceB = 10,
-      // // 	      g1 = Group.create({key: key1, fee: fee1, people: {a: {balance: startingBalanceA}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
-      // // 	      g2 = Group.create({key: key2, fee: fee2, people: {b: {balance: startingBalanceB}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
-      // // 	      targetAmount = 10,
-      // // 	      computedRedemptionCost = g2.computeTransferCost(targetAmount), // Different from computePurchaseCost used for receiving to other groups.
-      // // 	      computedCertificateCost = g1.computeCertificateCost(computedRedemptionCost),
-      // // 	      certificate = g1.issueFairShareCertificate(computedRedemptionCost, 'a', 'b'),
-      // // 	      certificateCost = startingBalanceA - g1.people.a.balance,
-      // // 	      credit = g2.redeemFairShareCertificate(certificate),
-      // // 	      redemptionCredit = g2.people.b.balance - startingBalanceB;
-      // // 	//console.log({computedRedemptionCost, computedCertificateCost, certificate, certificateCost, credit, redemptionCredit});
-      // // 	it('does not require receiver to be in sending group or sender to be in receiving group.', function () {
-      // // 	  expect(g1.people.b).toBeUndefined(); // In this case
-      // // 	  expect(g2.people.a).toBeUndefined();
-      // // 	});
-      // // 	it('generates certificate for requested amount.', function () {
-      // // 	  expect(certificate.amount).toBe(computedRedemptionCost);
-      // // 	});
-      // // 	it('subtracts cost from sender.', function () {
-      // // 	  expect(certificateCost).toBe(computedCertificateCost);
-      // // 	});
-      // // 	it('adds sending group coin to its reserve.', function () {
-      // // 	  expect(g1.exchange.totalGroupCoinReserve).toBe(reserve + computedCertificateCost);
-      // // 	});
-      // // 	it('subtracts FairShare from sending reserve.', function () {
-      // // 	  expect(g1.exchange.totalReserveCurrencyReserve).toBe(reserve - certificate.amount);
-      // // 	});
-      // // 	it('adds credit to receiver when certificate is redeemed.', function () {
-      // // 	  expect(redemptionCredit).toBeLessThanOrEqual(targetAmount);
-      // // 	});
-      // // 	it('does not change receiving group reserve currency.', function () {
-      // // 	  expect(g2.exchange.totalReserveCurrencyReserve).toBe(reserve); // Unchanged, unlike receiving to other groups.
-      // // 	});
-      // // 	it('does not change receiving group coin in its reserve.', function () {
-      // // 	  expect(g2.exchange.totalGroupCoinReserve).toBe(reserve); // Unchanged, unlike receiving to other groups.
-      // // 	});
-      // // });
-      // // FIXME: In real app, the sender cannot redeem cert for the recipient (e.g., if sender is not a member). So we must instead add cert to recipient's pending stuff.
-      // 	     // FIXME: test against double redeem
-      // 	     // FIXME: test for exceeding reserve (at either end) and for exceeding user's balance.
-      // 	// FIXME: test for recipient not being a member of receiving group.
+	describe('from FairShare', function () {
+	  describe('dry run', function () {
+	    sendTest({execute: false, name1: 'FairShare'});
+	  });
+	  describe('executing run', function () {
+	    sendTest({execute: true, name1: 'FairShare'});
+	  });
+	});
+	describe('to FairShare', function () {
+	  describe('dry run', function () {
+	    sendTest({execute: false, name2: 'FairShare'});
+	  });
+	  describe('executing run', function () {
+	    sendTest({execute: true, name2: 'FairShare'});
+	  });
+	});
       });
     });
 
