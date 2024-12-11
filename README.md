@@ -63,9 +63,13 @@ This is an MVP Proof-of-Concept to see if I have misunderstood the intended beha
 
 Some behavior that is not implemented:
 
+- **UX design** - A delightful and easy-to-use experience requires two things that I don't have: 1) an understanding of who will use this and what they want to accomplish, and 2) UX talent. However, even within these constraints, the current "engineer's special" UI can surely be improved.
+
 - **swap market-making** - In this PoC, the _directory_ exchanges between group directly at 1:1.
 - **swap to dollars** - ....
 - **locks**
+
+- **dependency-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperitive Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated.
 
 - **group statistics** - e.g., volume of transactions, inequality index, and balance of trade with other group’s currencies. This is ommitted until we're happy with the basic operations.
 - **delegatation** - giving your vote (on candidates, taxes, etc.) to someone else. (Not hard, just not necessary for the basics.)

@@ -7,10 +7,10 @@
 // There is a test suite that illustrates the use of these, at spec/domsinSpec.js
 
 // Internally, amounts are in whole numbers (with costs rounded up), and fees taken as a floating point number (e.g., 12% is 0.12)
-function roundUpToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
+export function roundUpToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
   return Math.ceil(number * unit) / unit;
 }
-function roundDownToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
+export function roundDownToNearest(number, unit = 1) { // Rounds up to nearest whole value of unit.
   return Math.floor(number * unit) / unit;
 }
 
@@ -18,7 +18,7 @@ function roundDownToNearest(number, unit = 1) { // Rounds up to nearest whole va
 // 1. It would be insecure to rely on callers to do it.
 // 2. Here we know the particulars of what went wrong.
 // So, we gather the particulars here rather than some generic invalid or coded return value.
-class FairShareError extends Error {
+export class FairShareError extends Error {
   constructor({name, ...properties}) {
     // In some networking/replication models, domain operations must return the same values,
     // and so we cannot produce localized error message strings here.
@@ -27,10 +27,10 @@ class FairShareError extends Error {
     Object.assign(this, {name, ...properties});
   }
 }
-class UnknownUser extends FairShareError { }
-class InsufficientFunds extends FairShareError { }
-class InsufficientReserves extends InsufficientFunds { }
-class ReusedCertificate extends FairShareError { }
+export class UnknownUser extends FairShareError { }
+export class InsufficientFunds extends FairShareError { }
+export class InsufficientReserves extends InsufficientFunds { }
+export class ReusedCertificate extends FairShareError { }
 
 
 // There are two subclasses: User and Group, below.
@@ -50,7 +50,7 @@ class SharedObject { // Stateful object that are replicated among all who have a
 }
 
 
-class User extends SharedObject { // Represent a User (globally, not specificaly within a single Group).
+export class User extends SharedObject { // Represent a User (globally, not specificaly within a single Group).
   static directory = {}; // Distinct from other SharedObjects.
   constructor(properties) {
     super(properties);
@@ -72,7 +72,7 @@ class User extends SharedObject { // Represent a User (globally, not specificaly
   }
 }
 
-class Group extends SharedObject { // Represent a group with currency, exchange, candidate and admitted members, etc.
+export class Group extends SharedObject { // Represent a group with currency, exchange, candidate and admitted members, etc.
   static directory = {}; // Distsinct from other SharedObjects.
   static get list() { // List all the Groups.
     return Object.keys(this.directory);
@@ -171,7 +171,7 @@ class Group extends SharedObject { // Represent a group with currency, exchange,
   }
 }
 
-class Exchange { // Implements the math of Uniswap V1.
+export class Exchange { // Implements the math of Uniswap V1.
   constructor({totalGroupCoinReserve, totalReserveCurrencyReserve, fee = 0.003}) {
     Object.assign(this, {totalGroupCoinReserve, totalReserveCurrencyReserve, fee});
   }
@@ -208,9 +208,9 @@ class Exchange { // Implements the math of Uniswap V1.
     const kAfter = totalReserveCurrencyReserve * totalGroupCoinReserve;
     console.log({label, inputAmount, outputAmount, fee, rate, inputReserve, outputReserve, totalReserveCurrencyReserve, totalGroupCoinReserve, kBefore, kAfter});
   }
-  checkReserves(outputAmount, reserveCurrency) {
+  checkReserves(inputAmount, outputAmount, reserveCurrency) {
     let reserve = reserveCurrency ? this.totalReserveCurrencyReserve : this.totalGroupCoinReserve;
-    if (outputAmount >= reserve) throw new InsufficientReserves({outputAmount, reserve, reserveCurrency});
+    if (outputAmount >= reserve) throw new InsufficientReserves({inputAmount, outputAmount, reserve, reserveCurrency});
   }
   
   sellGroupCoin(amount) { // User sells amount of group currency to reserves, removing computed outputAmount of reserve currency from reserves.
@@ -218,7 +218,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const inputReserve = this.totalGroupCoinReserve;
     const outputReserve = this.totalReserveCurrencyReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
-    this.checkReserves(outputAmount, true);
+    this.checkReserves(amount, outputAmount, true);
     this.totalGroupCoinReserve += inputAmount;
     this.totalReserveCurrencyReserve -= outputAmount;
     this.reportTransaction({label: 'sellGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
@@ -229,7 +229,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const inputReserve = this.totalReserveCurrencyReserve;
     const outputReserve = this.totalGroupCoinReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
-    this.checkReserves(outputAmount, false);
+    this.checkReserves(amount, outputAmount, false);
     this.totalGroupCoinReserve -= outputAmount;
     this.totalReserveCurrencyReserve += inputAmount;
     this.reportTransaction({label: 'sellPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
@@ -240,7 +240,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const outputReserve = this.totalGroupCoinReserve;
     const inputReserve = this.totalReserveCurrencyReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
-    this.checkReserves(outputAmount, false);
+    this.checkReserves(amount, outputAmount, false);
     this.totalReserveCurrencyReserve += inputAmount;
     this.totalGroupCoinReserve -= outputAmount;
     this.reportTransaction({label: 'buyGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});
@@ -251,7 +251,7 @@ class Exchange { // Implements the math of Uniswap V1.
     const outputReserve = this.totalReserveCurrencyReserve;
     const inputReserve = this.totalGroupCoinReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
-    this.checkReserves(outputAmount, true);
+    this.checkReserves(amount, outputAmount, true);
     this.totalReserveCurrencyReserve -= outputAmount;
     this.totalGroupCoinReserve += inputAmount;
     this.reportTransaction({label: 'buyPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});
@@ -269,4 +269,4 @@ Group.create({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", peopl
 Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
 
 // For unit testing in NodeJS.
-if (typeof(module) !== 'undefined') module.exports = {roundUpToNearest, roundDownToNearest, User, Group, Exchange};
+//if (typeof(module) !== 'undefined') module.exports = {roundUpToNearest, roundDownToNearest, User, Group, Exchange};

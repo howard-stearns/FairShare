@@ -7,8 +7,7 @@
 //       We should choose numbers such that the tests will fail if we're using the wrong calculation.
 // TODO: Create a way to test that redeeming a certificate for more than the target reserves will fail.
 
-
-const {roundUpToNearest, roundDownToNearest, User, Group, Exchange} = require('../domain.js');
+import {roundUpToNearest, roundDownToNearest, User, Group, Exchange} from '../domain.js';
 //jasmine.getEnv().configure({random: false}); // Whether or not to randomize the order.
 
 describe('FairShare', function () {

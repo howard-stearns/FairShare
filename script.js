@@ -1,7 +1,7 @@
 /*
   TODO:
-  - Should insufficient funds/reserve be thrown from domain rather than app?
   - re-open doesn't work after close
+  - Fix up certficate management.
   - be consistent about naming keys vs actual SharedObjects
   - show reserves in group display
   - stipend
@@ -10,8 +10,21 @@
   - vote
   - user menu
   - disable twist down a group you are not in
-  - genericize (including, dynamically add group-based css and populating users)
- */
+  - genericize (including dynamically addition of group-based css rule, populating users, and populating user menus appropriately)
+*/
+
+import {User, Group, UnknownUser, InsufficientFunds, InsufficientReserves} from './domain.js';
+import {ApplicationState} from './application.js';
+/*
+  const subtitle = document.getElementById('subtitle'),
+      paymeCurrency = document.getElementById('paymeCurrency'),
+      fromCurrency = document.getElementById('fromCurrency'),
+      groupFilter = document.getElementById('groupFilter'),
+      currentUserName = document.getElementById('currentUserName'),
+      userButton = document.getElementById('userButton'),
+      fixmeOtherUser = document.getElementById('fixmeOtherUser'),
+      payee = document.getElement
+      */
 
 class App extends ApplicationState {
   // These are called when their key's value is changed, and are used to set things up to match the change.
@@ -26,22 +39,17 @@ class App extends ApplicationState {
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
     updateQRDisplay({payee: this.pending.user || this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
     if (state) document.getElementById(state).scrollIntoView();
+    this.setPayment();
   }
   groupFilter(state) { // Set the toggle.
     if (groupFilter.checked === !!state) return;
     groupFilter.click();
   }
-  payee(state) { // Set the text.
-    payee.textContent = User.get(state).name;
-  }
-  currency(state) { // The target group for a payment to someone else.
-    const {name} = Group.get(state).name;
-    currencyExchanged.textContent = currency.textContent = Group.get(state).name;;
-  }
   user(state) {  // Set the images, switch user options, and qr code.
     const {name, img} = User.get(state),
 	  picture = `images/${img}`,
 	  fixmeOther = localPersonas[(localPersonas.indexOf(state)+1) % localPersonas.length];
+    this.redeemCertificates(state); // TODO: handle failures
     currentUserName.textContent = name;
     userButton.querySelector('img').src = picture;
     fixmeOtherUser.textContent = User.get(fixmeOther).name; fixmeOtherUser.dataset.href = fixmeOther;
@@ -55,12 +63,77 @@ class App extends ApplicationState {
       const groupUserData = group.people[state],
 	    isMember = groupUserData && !groupUserData.isCandidate,
 	    checkbox = groupElement.querySelector('expanding-li label.mdl-checkbox');
+      componentHandler.upgradeElement(checkbox); // Otherwise no MaterialCheckbox. (A quirk of Material Design Lite.)
       updateGroupBalance(groupElement, groupUserData?.balance);
-      setTimeout(() => checkbox.MaterialCheckbox[isMember ? 'check' : 'uncheck']()); // Silly, but needs time.
+      checkbox.MaterialCheckbox[isMember ? 'check' : 'uncheck']();
       if (isMember) {
 	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu.
 	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu.
       }
+    }
+  }
+  payee(state) { // Set the text.
+    payee.textContent = User.get(state).name;
+    this.setPayment();
+  }
+  currency(state) { // The target group for a payment to someone else.
+    const {name} = Group.get(state).name;
+    currencyExchanged.textContent = currency.textContent = Group.get(state).name;
+    this.setPayment();
+  }
+  amount(state) {
+    document.querySelector('[for="payAmount"]').textContent = state;
+    this.setPayment();
+  }
+
+  setPayment() { // Set up whatever can be set up about payment display.
+    setTimeout(() => this.pay(false)); // Values are not set yet.
+  }
+    
+  pay(execute) {
+    let {payee, amount, currency, group, user} = this.states;
+    amount = this.asNumber(amount);
+    const fromGroup = Group.get(group);
+    function setCosts(cost, balance) {
+      fromCost.textContent = cost;
+      fromAfter.textContent = balance;
+      fromBefore.textContent = balance + cost;
+    }
+    function getBalance() { // Ugh
+      return Group.get(group)?.people[user].balance || 0;
+    }
+    if (!(amount && group && currency && user && payee)) {
+      setCosts(0, getBalance());
+      payButton.disabled = true;
+      document.body.classList.remove('payment-bridge');
+      return;
+    }
+    try {
+      const {cost, balance, certificateCost} = super.pay(execute);
+      const currencyName = Group.get(currency).name;
+      const payeeName = User.get(payee).name
+      setCosts(cost, balance);
+      payButton.textContent = `Pay ${payeeName} ${amount} ${currencyName} using ${cost} ${fromGroup.name}`;
+      payButton.disabled = execute; // Arbitrary design choice: Disable it on successful actual payment.
+      bridgeCost.textContent = certificateCost;
+      document.body.classList.toggle('payment-bridge', certificateCost !== undefined);
+      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${currencyName} to ${payeeName}`});
+    } catch (error) {
+      let message; // Can only be localized to language here in the app.
+      if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
+	const {inputAmount, outputAmount, outputReserve} = error;
+	message = `You need ${outputAmount} FairShares from ${fromGroup.name}, but the reserves there only have ${outputReserve}.`;
+	setCosts(inputAmount, getBalance() - inputAmount);
+      } else if (error instanceof InsufficientFunds) {
+	const {cost, balance, groupName} = error;
+	message = `You need ${cost} ${groupName}, but you only have ${balance}.`;
+	setCosts(cost, balance);
+      } else {
+	message = error.message;
+      }
+      payButton.disabled = true;
+      document.body.classList.remove('payment-bridge'); // It would be nice if we had a cost to show.
+      displayError(message, error.name);
     }
   }
 
@@ -79,7 +152,7 @@ class App extends ApplicationState {
     this.updateURL(key, state); // Make the internal url reflect state. Used by save().
   }
   // These two are tracked, but we do not add/remove classes for their values (which are from the same set as user & group).
-  unstyled = [ 'payee', 'currency' ];
+  unstyled = [ 'payee', 'currency', 'amount' ];
 
   // Local application state is saved, um, locally.
   save() { // Persist for next session, and update browser history, too.
@@ -145,39 +218,12 @@ function displayError(message, title = 'Error') { // Show an error dialog to the
   errorDialog.showModal();
 }
 
-function updatePaymentCosts() {
-  const amount = parseFloat(document.querySelector('input[for="payAmount"]').value || '0');
-  const {payee, group, currency} = LocalState.states;
-  try {
-    let [cost, balanceBefore, balanceAfter, exchangeCost] = LocalState.computePayment(amount);
-    payButton.disabled = !amount;
-    payButton.textContent = `Pay ${User.get(payee).name} ${amount} ${Group.get(currency).name} using ${cost} ${Group.get(exchangeCost ? group : currency).name}`;
-    document.body.classList.toggle('payment-bridge', !!exchangeCost);
-    bridgeCost.textContent = exchangeCost;
-    fromCost.textContent = cost;
-    fromBefore.textContent = balanceBefore;
-    fromAfter.textContent = balanceAfter;
-    return [exchangeCost, amount];
-  } catch (error) {
-    payButton.disabled = true;
-    fromCost.textContent = fromAfter.textContent = 0;
-    document.body.classList.remove('payment-bridge');
-    displayError(error.message, error.name);
-  }
+export function pay() { // Actually pay someone (or display error)
+  LocalState.pay(true);
+  updateGroupDisplay(LocalState.states.group);
 }
-
-function pay() { // Actually pay someone.
-  let [fromAmount, toAmount] = updatePaymentCosts(); // Get the latest costs.
-  try {
-    LocalState.pay(fromAmount, toAmount);
-    let {group, payee, currency} = LocalState.states;
-    updateGroupDisplay(document.getElementById(group), group);
-    snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${toAmount} ${Group.get(currency).name} to ${User.get(payee).name}`});
-    return true;
-  } catch (error) {
-    displayError(error.message, error.name);
-    return false;
-  }
+export function updatePaymentCosts() { // Update display
+  LocalState.merge({amount: document.querySelector('input[for="payAmount"]').value});
 }
 
 function updateGroupBalance(groupElement, balance = '') { // 0 is '0', but undefined becomes ''.
@@ -185,7 +231,8 @@ function updateGroupBalance(groupElement, balance = '') { // 0 is '0', but undef
   for (const element of groupElement.querySelectorAll('.balance')) element.textContent = balance;
 }
 
-function updateGroupDisplay(groupElement, key) {
+function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
+  if (!key) return;
   const {name, img, people, fee, stipend} = Group.get(key);
   groupElement.querySelector('expanding-li .mdl-list__item-avatar').setAttribute('src', `images/${img}`);
   groupElement.querySelector('expanding-li .group-name').textContent = name;
@@ -216,11 +263,11 @@ function updateGroupDisplay(groupElement, key) {
 function makeGroupDisplay(key) { // Render the data for a group and it's members.
   const groupElement = groupTemplate.content.cloneNode(true).querySelector('li');
   groupElement.setAttribute('id', key);
-  updateGroupDisplay(groupElement, key);
+  updateGroupDisplay(key, groupElement);
   groupsList.append(groupElement);
 }
 
-function fillCurrencyMenu(key, name, listSelector) {
+export function fillCurrencyMenu(key, name, listSelector) {
   const currencyChoice = paymentTemplate.content.cloneNode(true).firstElementChild;
   currencyChoice.dataset.key = key;
   currencyChoice.textContent = name;
@@ -229,7 +276,7 @@ function fillCurrencyMenu(key, name, listSelector) {
 
 
 // These onclick handlers are wired in index.html
-function toggleGroup() { // Open accordian for group, and make that one current.
+export function toggleGroup() { // Open accordian for group, and make that one current.
   let item = event.target;
   while (!item.hasAttribute('id')) item = item.parentElement;
   const group = item.getAttribute('id');
@@ -238,35 +285,36 @@ function toggleGroup() { // Open accordian for group, and make that one current.
   if (LocalState.getState('group') === group) document.body.classList.remove(group);
   else LocalState.merge({group: group});
 }
-function chooseGroup() { // For someone to pay you. Becomes default group.
+export function chooseGroup() { // For someone to pay you. Becomes default group.
   LocalState.merge({group: event.target.dataset.key});
   updatePaymentCosts();
 }
-function chooseCurrency() { // What the payment is priced in
+export function chooseCurrency() { // What the payment is priced in
   LocalState.merge({currency: event.target.dataset.key});
   updatePaymentCosts();
 }
-function changeAmount() {
+export function changeAmount() {
   updatePaymentCosts();
 }
-function userMenu() { // Act on user's choice in the user context menu.
+export  function userMenu() { // Act on user's choice in the user context menu.
   const state = event.target.dataset.href;
   if (['payme', 'profile', 'addUserKey', 'newUser'].includes(state)) return location.hash = state;
   LocalState.merge({user: state, group: ''});
 }
-function choosePayee() { // Pick someone to pay.
+export function choosePayee() { // Pick someone to pay.
   LocalState.merge({payee: event.target.dataset.key});
 }
-function toggleDrawer() { // Close the drawer after navigating.
+export function toggleDrawer() { // Close the drawer after navigating.
   document.querySelector('.mdl-layout').MaterialLayout.toggleDrawer();
 }
-function filterGroups() {
+export function filterGroups() {
   LocalState.merge({'groupFilter': event.target.checked ? 'allGroups' : ''});
 }
 
 function hashChange(event, {...props} = {}) { // A change to a different section.
   LocalState.merge({section: location.hash.slice(1) || 'groups', ...props}, true);
 }
+
 window.addEventListener('popstate', event => event.state && LocalState.merge(event.state, true));
 window.addEventListener('hashchange', hashChange);
 window.addEventListener('load', () => {

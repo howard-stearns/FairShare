@@ -20,8 +20,13 @@
 
     <!-- Ours -->
     <link rel="stylesheet" href="style.css">
-    <script defer src="domain.js"></script>
-    <script src="application.js"></script>
+    <script type="module">
+      // To the various .js file work easily in browser, node, test frameworks, lint, etc., they are all proper, modern ES6 modules.
+      // To be able to use the script.js functions directly in onclick or other handlers, above, we need them to be defined on window.
+      // The easiest way to do that is to explicitly do so here using the exports object, which has all the named exports of script.js as keys.
+      import * as exports from './script.js';
+      for (const key in exports) globalThis[key] = exports[key];
+    </script> 
   </head>
   <body>
     <!-- repeats for each group -->
@@ -149,7 +154,7 @@
 	<section id="pay">
 	  <div class="page-content">
 	    <row>
-	      <label>pay: <span id="payee">alice</span>
+	      <label>pay: <span id="payee">pick one</span>
 		<button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
 		  <i class="material-icons">change_circle</i>
 		</button>
@@ -276,6 +281,5 @@
       <div class="mdl-snackbar__text"></div>
       <button type="button" class="mdl-snackbar__action"></button>
     </div>
-    <script src="script.js"></script>
   </body>
 </html>
