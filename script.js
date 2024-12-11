@@ -15,16 +15,17 @@
 
 import {User, Group, UnknownUser, InsufficientFunds, InsufficientReserves} from './domain.js';
 import {ApplicationState} from './application.js';
-/*
-  const subtitle = document.getElementById('subtitle'),
-      paymeCurrency = document.getElementById('paymeCurrency'),
-      fromCurrency = document.getElementById('fromCurrency'),
-      groupFilter = document.getElementById('groupFilter'),
-      currentUserName = document.getElementById('currentUserName'),
-      userButton = document.getElementById('userButton'),
-      fixmeOtherUser = document.getElementById('fixmeOtherUser'),
-      payee = document.getElement
-      */
+
+// The following are not strictly necessary as they are defined globally, but making it explicit is more robust and aids developer tools.
+var {URL, URLSearchParams, localStorage, addEventListener} = window; // Defined by Javascript.
+var {componentHandler, QRCodeStyling} = window;    // Defined by Material Design Lite and qr code libraries.
+var {subtitle, paymeCurrency, fromCurrency, groupFilter, currentUserName, userButton, fixmeOtherUser,
+     payee, groupsList, currency, currencyExchanged,
+     fromCost, fromBefore, fromAfter, payButton, snackbar, bridgeCost, qrDisplay, paymeURL,
+     errorTitle, errorMessage, errorDialog,
+     groupTemplate, groupMemberTemplate, paymentTemplate} = window; // Defined by index.html elements with id= attribute.
+
+const localPersonas = ['alice', 'bob']; // fixme?
 
 class App extends ApplicationState {
   // These are called when their key's value is changed, and are used to set things up to match the change.
@@ -100,7 +101,7 @@ class App extends ApplicationState {
       fromBefore.textContent = balance + cost;
     }
     function getBalance() { // Ugh
-      return Group.get(group)?.people[user].balance || 0;
+      return Group.get(group)?.people[user]?.balance || 0;
     }
     if (!(amount && group && currency && user && payee)) {
       setCosts(0, getBalance());
@@ -111,7 +112,7 @@ class App extends ApplicationState {
     try {
       const {cost, balance, certificateCost} = super.pay(execute);
       const currencyName = Group.get(currency).name;
-      const payeeName = User.get(payee).name
+      const payeeName = User.get(payee).name;
       setCosts(cost, balance);
       payButton.textContent = `Pay ${payeeName} ${amount} ${currencyName} using ${cost} ${fromGroup.name}`;
       payButton.disabled = execute; // Arbitrary design choice: Disable it on successful actual payment.
@@ -179,7 +180,6 @@ class App extends ApplicationState {
   }
 }
 const LocalState = new App();
-let localPersonas = ['alice', 'bob']; // fixme?
 
 function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code url+picture.
   const params = new URLSearchParams();
@@ -216,14 +216,6 @@ function displayError(message, title = 'Error') { // Show an error dialog to the
   errorTitle.textContent = title;
   errorMessage.textContent = message;
   errorDialog.showModal();
-}
-
-export function pay() { // Actually pay someone (or display error)
-  LocalState.pay(true);
-  updateGroupDisplay(LocalState.states.group);
-}
-export function updatePaymentCosts() { // Update display
-  LocalState.merge({amount: document.querySelector('input[for="payAmount"]').value});
 }
 
 function updateGroupBalance(groupElement, balance = '') { // 0 is '0', but undefined becomes ''.
@@ -267,7 +259,7 @@ function makeGroupDisplay(key) { // Render the data for a group and it's members
   groupsList.append(groupElement);
 }
 
-export function fillCurrencyMenu(key, name, listSelector) {
+function fillCurrencyMenu(key, name, listSelector) {
   const currencyChoice = paymentTemplate.content.cloneNode(true).firstElementChild;
   currencyChoice.dataset.key = key;
   currencyChoice.textContent = name;
@@ -275,8 +267,16 @@ export function fillCurrencyMenu(key, name, listSelector) {
 }
 
 
-// These onclick handlers are wired in index.html
-export function toggleGroup() { // Open accordian for group, and make that one current.
+// These onclick handlers are wired in index.html. They are exported so that index.html can reference them.
+export function pay() { // Actually pay someone (or display error)
+  LocalState.pay(true);
+  updateGroupDisplay(LocalState.states.group);
+}
+export function updatePaymentCosts() { // Update display
+  LocalState.merge({amount: document.querySelector('input[for="payAmount"]').value});
+}
+
+export function toggleGroup(event) { // Open accordian for group, and make that one current.
   let item = event.target;
   while (!item.hasAttribute('id')) item = item.parentElement;
   const group = item.getAttribute('id');
@@ -285,29 +285,29 @@ export function toggleGroup() { // Open accordian for group, and make that one c
   if (LocalState.getState('group') === group) document.body.classList.remove(group);
   else LocalState.merge({group: group});
 }
-export function chooseGroup() { // For someone to pay you. Becomes default group.
+export function chooseGroup(event) { // For someone to pay you. Becomes default group.
   LocalState.merge({group: event.target.dataset.key});
   updatePaymentCosts();
 }
-export function chooseCurrency() { // What the payment is priced in
+export function chooseCurrency(event) { // What the payment is priced in
   LocalState.merge({currency: event.target.dataset.key});
   updatePaymentCosts();
 }
 export function changeAmount() {
   updatePaymentCosts();
 }
-export  function userMenu() { // Act on user's choice in the user context menu.
+export  function userMenu(event) { // Act on user's choice in the user context menu.
   const state = event.target.dataset.href;
   if (['payme', 'profile', 'addUserKey', 'newUser'].includes(state)) return location.hash = state;
   LocalState.merge({user: state, group: ''});
 }
-export function choosePayee() { // Pick someone to pay.
+export function choosePayee(event) { // Pick someone to pay.
   LocalState.merge({payee: event.target.dataset.key});
 }
 export function toggleDrawer() { // Close the drawer after navigating.
   document.querySelector('.mdl-layout').MaterialLayout.toggleDrawer();
 }
-export function filterGroups() {
+export function filterGroups(event) {
   LocalState.merge({'groupFilter': event.target.checked ? 'allGroups' : ''});
 }
 
@@ -315,9 +315,9 @@ function hashChange(event, {...props} = {}) { // A change to a different section
   LocalState.merge({section: location.hash.slice(1) || 'groups', ...props}, true);
 }
 
-window.addEventListener('popstate', event => event.state && LocalState.merge(event.state, true));
-window.addEventListener('hashchange', hashChange);
-window.addEventListener('load', () => {
+addEventListener('popstate', event => event.state && LocalState.merge(event.state, true));
+addEventListener('hashchange', hashChange);
+addEventListener('load', () => {
   console.log('loading');
   Group.list.forEach(makeGroupDisplay);
   // A hack for our double-labeled switches.

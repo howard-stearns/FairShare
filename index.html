@@ -40,7 +40,7 @@
 	      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" onclick="toggleGroup(event)">
 		<i class="material-icons">unfold_more</i>
 	      </button>
-	      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" onclick="toggleGroup()">
+	      <button class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" onclick="toggleGroup(event)">
 		<i class="material-icons">unfold_less</i>
 	      </button>
 	    </span>
@@ -113,7 +113,7 @@
 	  <button class="mdl-button mdl-js-button mdl-button--icon avatar-button" id="userButton">
 	    <img class="mdl-list__item-avatar" src="images/alice.jpeg"></img>
 	  </button>
-	  <ul class="mdl-menu mdl-js-menu mdl-menu--bottom-right" for="userButton" onclick="userMenu()">
+	  <ul class="mdl-menu mdl-js-menu mdl-menu--bottom-right" for="userButton" onclick="userMenu(event)">
 	    <li class="mdl-layout-title">User: <span id="currentUserName"></span></li>
 	    <li class="mdl-menu__item" data-href="payme">Pay-me code</li>
 	    <li class="mdl-menu__item" data-href="profile">Profile</li>
@@ -142,7 +142,7 @@
 	      <double-labeled-switch>
 		<span class="switch-label">mine</span>
 	      <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect">
-		<input type="checkbox" class="mdl-switch__input" checked id="groupFilter" onclick="filterGroups()">
+		<input type="checkbox" class="mdl-switch__input" checked id="groupFilter" onclick="filterGroups(event)">
 		<span class="mdl-switch__label">all</span>
 	      </label>
 	      </double-labeled-switch>
@@ -158,7 +158,7 @@
 		<button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
 		  <i class="material-icons">change_circle</i>
 		</button>
-		<ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee()">
+		<ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee(event)">
 		  <!-- FIXME fill by people -->
 		  <li class="mdl-menu__item" data-key="alice">Alice</li>
 		  <li class="mdl-menu__item" data-key="bob">Bob</li>
@@ -175,7 +175,7 @@
 		<button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
 		  <i class="material-icons">change_circle</i>
 		</button>
-		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency()">
+		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency(event)">
 		</ul>
 	      </label>
 	    </row>
@@ -202,7 +202,7 @@
 		<button id="fromCurrencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
 		  <i class="material-icons">change_circle</i>
 		</button>
-		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup()">
+		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup(event)">
 	      </label>
 	      </ul>
 	    </row>
@@ -234,7 +234,7 @@
 	      <button id="paymentButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
 		<i class="material-icons">change_circle</i>
 	      </button>
-	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseGroup()">
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseGroup(event)">
 	      </ul>
 	      
 	    </row>
