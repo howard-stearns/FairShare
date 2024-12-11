@@ -1,6 +1,5 @@
 /*
   TODO:
-  - re-open doesn't work after close
   - Fix up certficate management.
   - be consistent about naming keys vs actual SharedObjects
   - show reserves in group display
@@ -279,11 +278,12 @@ export function updatePaymentCosts() { // Update display
 export function toggleGroup(event) { // Open accordian for group, and make that one current.
   let item = event.target;
   while (!item.hasAttribute('id')) item = item.parentElement;
-  const group = item.getAttribute('id');
-  if (!group) return;
-  // If we're toggling the same group off, just remove it from the body class, without changing state.
-  if (LocalState.getState('group') === group) document.body.classList.remove(group);
-  else LocalState.merge({group: group});
+  const buttonGroupKey = item.getAttribute('id'),
+	currentGroupKey = LocalState.states.group;
+  if (!buttonGroupKey) return;
+  if (buttonGroupKey !== currentGroupKey) return LocalState.merge({group: buttonGroupKey}); // Switch groups.
+  // Otherwise, we're toggling the display on the current group.
+  document.body.classList.toggle(buttonGroupKey);
 }
 export function chooseGroup(event) { // For someone to pay you. Becomes default group.
   LocalState.merge({group: event.target.dataset.key});
