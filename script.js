@@ -1,13 +1,12 @@
 /*
   TODO:
-  - Fix up certficate management.
-  - be consistent about naming keys vs actual SharedObjects
-  - show reserves in group display
   - stipend
-  - widthraw
-  - invest, including accounting data
   - vote
   - user menu
+  - show reserves in group display
+  - widthraw
+  - invest, including accounting data
+  - simplify paying other groups/certs
   - disable twist down a group you are not in
   - genericize (including dynamically addition of group-based css rule, populating users, and populating user menus appropriately)
 */
@@ -18,13 +17,11 @@ import {ApplicationState} from './application.js';
 // The following are not strictly necessary as they are defined globally, but making it explicit is more robust and aids developer tools.
 var {URL, URLSearchParams, localStorage, addEventListener} = window; // Defined by Javascript.
 var {componentHandler, QRCodeStyling} = window;    // Defined by Material Design Lite and qr code libraries.
-var {subtitle, paymeCurrency, fromCurrency, groupFilter, currentUserName, userButton, fixmeOtherUser,
+var {subtitle, paymeCurrency, fromCurrency, groupFilter, userButton,
      payee, groupsList, currency, currencyExchanged,
      fromCost, fromBefore, fromAfter, payButton, snackbar, bridgeCost, qrDisplay, paymeURL,
      errorTitle, errorMessage, errorDialog,
      groupTemplate, groupMemberTemplate, paymentTemplate} = window; // Defined by index.html elements with id= attribute.
-
-const localPersonas = ['alice', 'bob']; // fixme?
 
 class App extends ApplicationState {
   // These are called when their key's value is changed, and are used to set things up to match the change.
@@ -47,13 +44,12 @@ class App extends ApplicationState {
   }
   user(state) {  // Set the images, switch user options, and qr code.
     const {name, img} = User.get(state),
-	  picture = `images/${img}`,
-	  fixmeOther = localPersonas[(localPersonas.indexOf(state)+1) % localPersonas.length];
+	  picture = `images/${img}`;
     this.redeemCertificates(state); // TODO: handle failures
-    currentUserName.textContent = name;
     userButton.querySelector('img').src = picture;
-    fixmeOtherUser.textContent = User.get(fixmeOther).name; fixmeOtherUser.dataset.href = fixmeOther;
     updateQRDisplay({payee: state, currency: this.pending.currency || this.states.currency, imageURL: picture});
+    document.querySelectorAll('.mdl-menu > [data-href]').forEach(e => e.removeAttribute('disabled'));
+    document.querySelector(`.mdl-menu > [data-href="${state}"]`).setAttribute('disabled', 'disabled');
     document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
     for (const groupElement of groupsList.children) {
@@ -318,7 +314,6 @@ function hashChange(event, {...props} = {}) { // A change to a different section
 addEventListener('popstate', event => event.state && LocalState.merge(event.state, true));
 addEventListener('hashchange', hashChange);
 addEventListener('load', () => {
-  console.log('loading');
   Group.list.forEach(makeGroupDisplay);
   // A hack for our double-labeled switches.
   document.querySelectorAll('.switch-label').forEach(label => label.onclick = (e) => label.nextElementSibling.click(e));

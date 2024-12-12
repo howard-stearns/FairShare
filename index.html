@@ -114,10 +114,10 @@
 	    <img class="mdl-list__item-avatar" src="images/alice.jpeg"></img>
 	  </button>
 	  <ul class="mdl-menu mdl-js-menu mdl-menu--bottom-right" for="userButton" onclick="userMenu(event)">
-	    <li class="mdl-layout-title">User: <span id="currentUserName"></span></li>
 	    <li class="mdl-menu__item" data-href="payme">Pay-me code</li>
-	    <li class="mdl-menu__item" data-href="profile">Profile</li>
-	    <li class="mdl-menu__item" data-href="bob", id="fixmeOtherUser">Bob</li>
+	    <li class="mdl-menu__item" data-href="alice">Alice<span class="yourself"></span></li>
+	    <li class="mdl-menu__item" data-href="bob">Bob<span class="yourself"></span></li>
+	    <li class="mdl-menu__item" data-href="carol">Carol<span class="yourself"></span></li>
 	    <li class="mdl-menu__item" data-href="addUserKey">Add user</li>
 	    <li class="mdl-menu__item" data-href="newUser">Create new user</li>	    
 	  </ul>
@@ -159,11 +159,10 @@
 		  <i class="material-icons">change_circle</i>
 		</button>
 		<ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee(event)">
-		  <!-- FIXME fill by people -->
-		  <li class="mdl-menu__item" data-key="alice">Alice</li>
-		  <li class="mdl-menu__item" data-key="bob">Bob</li>
-		  <li class="mdl-menu__item" data-key="carol">Carol</li>
-		  <!-- <li class="mdl-menu__item" data-key="venmo">venmo</li> -->
+		  <!-- FIXME dynamic fill -->
+		  <li class="mdl-menu__item" data-key="alice">Alice<span class="yourself"></span></li>
+		  <li class="mdl-menu__item" data-key="bob">Bob<span class="yourself"></span></li>
+		  <li class="mdl-menu__item" data-key="carol">Carol<span class="yourself"></span></li>
 		</ul>
 	      </label>
 	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
@@ -203,8 +202,6 @@
 		  <i class="material-icons">change_circle</i>
 		</button>
 		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup(event)">
-		  <li class="mdl-menu__item" data-key="apples">xApples</li>
-		  <li class="mdl-menu__item" data-key="bananas">xBananas</li>
 		</ul>
 	      </label>
 	    </row>
@@ -237,13 +234,27 @@
 		<i class="material-icons">change_circle</i>
 	      </button>
 	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paymentButton" onclick="chooseGroup(event)">
-		<li class="mdl-menu__item" data-key="apples">xApples</li>
-		<li class="mdl-menu__item" data-key="bananas">xBananas</li>
-		<li class="mdl-menu__item" data-key="coconuts">xCoconuts</li>
 	      </ul>
 	      
 	    </row>
 	    <div id="qrDisplay"></div>
+	  </div>
+	</section>
+	<section id="addUserKey">
+	  <div class="page-content">
+	    <h4>Not Implemented Yet</h4>
+	    <p>
+	      When <a href="README.md#exclusions" target="fairshare">Basic Security</a> is implemented, this operation will let you add an existing user to this device.
+	    </p>
+	  </div>
+	</section>
+	<section id="newUser">
+	  <div class="page-content">
+	    <h4>Not Implemented Yet</h4>
+	    <p>
+	      When <a href="README.md#exclusions" target="fairshare">Creating New Groups and New Users</a> is implemented, this operation will let you create a whole new user on this device. You will be able to add that user to other devices and continue to be able to switch between users.
+	    </p>
+	    <p>A user consists of a username, display name, and picture.
 	  </div>
 	</section>
 

@@ -24,8 +24,10 @@ body.fairshare li[id="fairshare"] button:not(.mdl-button--colored) {
 .pay      #pay,
 .withdraw #withdraw,
 .invest   #invest,
-.about    #about,
-.payme    #payme {
+.payme    #payme,
+.addUserKey #addUserKey,
+.newUser  #newUser,
+.about    #about {
     display: block;
 }
 body.apples li[id="apples"] button.mdl-button--colored,
@@ -43,6 +45,11 @@ body.fairshare li#fairshare group-details {
 
 /* Special stuff of ours */
 #subtitle::before { content: ": "; }
+body.alice .mdl-menu > [data-href="alice"] > .yourself::before,
+body.bob .mdl-menu > [data-href="bob"] > .yourself::before,
+body.carol .mdl-menu > [data-href="carol"] > .yourself::before {
+    content: " (you)"
+}
 #paymeURL { word-wrap: break-word; }
 double-labeled-switch .mdl-switch { width: fit-content; }
 double-labeled-switch .switch-label { padding-right: 16px; }
@@ -88,12 +95,6 @@ expanding-li {
     width: 100%;
     display: flex;
     align-items: center;
-}
-.mdl-menu .mdl-layout-title {
-    line-height: 56px;
-    color: #424242;
-    padding-left: 16px;
-    padding-bottom: 6px;
 }
 expanding-li > .mdl-list__item-primary-content > button {
     margin-left: 6px;

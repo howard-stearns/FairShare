@@ -261,7 +261,7 @@ export class Exchange { // Implements the math of Uniswap V1.
 
 User.create({ name: "Alice", img: "alice.jpeg" });
 User.create({ name: "Bob", img: "bob.png" });
-User.create({ name: "Carol" });
+User.create({ name: "Carol", img: "carol.jpeg" });
 
 Group.create({ name: "Apples", fee: 1, stipend: 1, img: "apples.jpeg", people: { alice: {balance: 100}, bob: {balance: 200} }});
 Group.create({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people: { bob: {balance: 300}, carol: {balance: 400} } });
