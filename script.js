@@ -48,8 +48,8 @@ class App extends ApplicationState {
     this.redeemCertificates(state); // TODO: handle failures
     userButton.querySelector('img').src = picture;
     updateQRDisplay({payee: state, currency: this.pending.currency || this.states.currency, imageURL: picture});
-    document.querySelectorAll('.mdl-menu > [data-href]').forEach(e => e.removeAttribute('disabled'));
-    document.querySelector(`.mdl-menu > [data-href="${state}"]`).setAttribute('disabled', 'disabled');
+    document.querySelectorAll('.mdl-menu > [data-key]').forEach(e => e.removeAttribute('disabled'));
+    document.querySelector(`.mdl-menu > [data-key="${state}"]`).setAttribute('disabled', 'disabled');
     document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
     for (const groupElement of groupsList.children) {
@@ -293,7 +293,7 @@ export function changeAmount() {
   updatePaymentCosts();
 }
 export  function userMenu(event) { // Act on user's choice in the user context menu.
-  const state = event.target.dataset.href;
+  const state = event.target.dataset.key;
   if (['payme', 'profile', 'addUserKey', 'newUser'].includes(state)) return location.hash = state;
   LocalState.merge({user: state, group: ''});
 }

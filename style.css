@@ -45,9 +45,9 @@ body.fairshare li#fairshare group-details {
 
 /* Special stuff of ours */
 #subtitle::before { content: ": "; }
-body.alice .mdl-menu > [data-href="alice"] > .yourself::before,
-body.bob .mdl-menu > [data-href="bob"] > .yourself::before,
-body.carol .mdl-menu > [data-href="carol"] > .yourself::before {
+body.alice .mdl-menu > [data-key="alice"] > .yourself::before,
+body.bob .mdl-menu > [data-key="bob"] > .yourself::before,
+body.carol .mdl-menu > [data-key="carol"] > .yourself::before {
     content: " (you)"
 }
 #paymeURL { word-wrap: break-word; }

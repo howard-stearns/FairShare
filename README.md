@@ -119,19 +119,19 @@ Writing code forces decisions. I've simplified things by making choices that mig
 
 **Reserve Currency** - The straw-person uses Uniswap V1 as a model for inter-group exchanges, with the FairShare group as the reserve currency:
 
-1. I'm not sure that a universal group is in the spirit of FairShare.
-2. The app does not directly support using Apples to pay someone in Coconuts. Instead, the sender uses the Apples exchange to get reserve currency (FairShare) that is ultimately credited to the receiver's FairShare account. If they then want to use that to buy Coconuts, that's up to the receiver. (This allows us to not worry about, e.g., attempting to pay in Coconuts when neither sender nor receiver is a member.)
+1. I'm not sure that a universal group (that has everyone as a member) is in the spirit of FairShare.
+2. The app does not directly support using, e.g., Apples to pay someone in Coconuts. Instead, the sender uses the Apples exchange to get reserve currency (FairShare) that is ultimately credited to the receiver's _FairShare_ group account. If they then want to use that to buy Coconuts, that's up to the receiver. (This allows us to not worry about, e.g., attempting to pay in Coconuts when neither sender nor receiver is a member of that group.)
 
 **Transaction fees** - There are several assumptions that might not be right:
 
-1. Instead of a fixed, low 0.3% fee for exchange pools (as hardcoded into Uniswap V1), I use the intragroup transfer fee. 
+1. Instead of a fixed, low 0.3% fee for exchange pools (as hardcoded into Uniswap V1), I use the intragroup transfer fee, which we expect to be much higher.
 2. The exchange pool adds the fee to the value in the pool, which is owned by the investors rather than the group as a whole. The fee is not used to reduce the amount of group coin in circulation (which would benefit all members).
 
 **Atomicity** - In the inter-group payment case above, steps 2-4 are atomic and can be handled by one network message. However, there can be changes to fees and exchange rates between 1 and 2, and between 4 and 5. This can result in the recipient being paid slightly more or less than the intended amount.
 
-**Identity** - Even when _Creating New Groups and New Users_ is implemented, it should be easy for the user of an app to switch between multiple global identities, and to use a different one for each group if they choose. However, I have assumed that the combination of a user key/username, display name, and picture are globally available to all. For example, when the user presents a QR code for someone else to pay them, that code is the same for all payers, without regard to what groups the payer is in or how the payer knows this particular payee.
+**Identity** - Even when _Creating New Groups and New Users_ is implemented (see [Exclusions](#exclusions), above), it should be easy for the user of an app to switch between multiple global identities, and to use a different one for each group if they choose. However, I have assumed that the combination of a username, display name, and picture are globally available to all. For example, when the user presents a QR code for someone else to pay them, that code is the same for all payers, without regard to what groups the payer is in or how the payer knows this particular payee.
 
 ### Running the app locally
 
-To run the app locally (e.g., after making changes), you need to [serve the files](https://realpython.com/python-http-server/). I.e., at http://localhost:8000 rather than file:///whatever/fairshare/index.html
+To run the app locally (e.g., after making local changes), you need to [serve the files](https://realpython.com/python-http-server/). I.e., at http://localhost:8000 rather than file:///whatever/fairshare/index.html
 
