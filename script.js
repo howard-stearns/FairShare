@@ -2,10 +2,8 @@
   TODO:
   - stipend
   - vote
-  - user menu
-  - show reserves in group display
-  - widthraw
   - invest, including accounting data
+  - show reserves in group display
   - simplify paying other groups/certs
   - disable twist down a group you are not in
   - genericize (including dynamically addition of group-based css rule, populating users, and populating user menus appropriately)

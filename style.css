@@ -14,7 +14,6 @@ body.fairshare li[id="fairshare"] button:not(.mdl-button--colored) {
 /* Make the current nav link look disabled */
 .groups   [href="#groups"],
 .pay      [href="#pay"],
-.withdraw [href="#withdraw"],
 .invest   [href="#invest"],
 .about    [href="#about"] {
     opacity: 0.5;
@@ -22,7 +21,6 @@ body.fairshare li[id="fairshare"] button:not(.mdl-button--colored) {
 /* On in certain conditions */
 .groups   #groups,
 .pay      #pay,
-.withdraw #withdraw,
 .invest   #invest,
 .payme    #payme,
 .addUserKey #addUserKey,
