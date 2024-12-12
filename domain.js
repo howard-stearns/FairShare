@@ -267,6 +267,3 @@ Group.create({ name: "Apples", fee: 1, stipend: 1, img: "apples.jpeg", people: {
 Group.create({ name: "Bananas", fee: 2, stipend: 2, img: "bananas.jpeg", people: { bob: {balance: 300}, carol: {balance: 400} } });
 Group.create({ name: "Coconuts", fee: 3, stipend: 3, img: "coconuts.jpeg", people: { carol: {balance: 500}, alice: {balance: 600} } });
 Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
-
-// For unit testing in NodeJS.
-//if (typeof(module) !== 'undefined') module.exports = {roundUpToNearest, roundDownToNearest, User, Group, Exchange};

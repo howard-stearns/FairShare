@@ -4,10 +4,10 @@
 // - Loosely corresponds to "Controller", "Presenter", or "ViewModel" in the "MVC", "MVP", and "MVVM" design patterns.
 // - Compare with domain.js.
 
-// There is only one instance - a singleton.
-// (Other implementations work, too, but a resettable singleton is convenient for testing.)
+// There is only one instance - a singleton in the LocalState var of script.js
+// (Other implementation would also work, but a resettable singleton is convenient for testing.)
 
-// There is a test suite that illustrates the use of these, at spec/applicationSpec.js
+// There is a test suite that illustrates the use of this, at spec/applicationSpec.js
 
 import {User, Group, UnknownUser, InsufficientFunds, InsufficientReserves} from './domain.js';
 
@@ -15,7 +15,7 @@ export class ApplicationState { // The specific implementation subclasses this.
   keys = [      // The various state names or dimensions that we track. Checks at runtime.
     'section', // The "page", "screen", or display we are on. In HTML, the standard is to divide the main element into sections.
     'user',    // The current user. One could have multiple "alts" or personas, even within the same group.
-    'group',   // What group, if any, are we examining or paying/withdrawing from, or investing in (or last did so).
+    'group',   // Which of the current user's groups is active: i.e., that we examining or paying/withdrawing from, or investing in (or last did so).
 
     'groupFilter', // Whether to show all, or just those that we are a member of.
     'payee',       // Who we are paying (or last paid). Only used in sending money.
