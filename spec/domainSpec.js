@@ -272,6 +272,18 @@ describe('FairShare', function () {
 		       () => g.send(startA, 'a', 'b', execute),
 		       () => ({name: 'InsufficientFunds', balance: startA-(execute ? expectedCost : 0), cost: g.computeTransferCost(startA), groupName: name}),
 		       checkBalances);
+	    checkError('if amount is negative.',
+		       () => g.send(-1, 'a', 'b', execute),
+		       () => ({name: 'NonPositive', amount: -1}),
+		       checkBalances);
+	    checkError('if amount is zero.',
+		       () => g.send(0, 'a', 'b', execute),
+		       () => ({name: 'NonPositive', amount: 0}),
+		       checkBalances);
+	    checkError('if amount is fractional.',
+		       () => g.send(1.2, 'a', 'b', execute),
+		       () => ({name: 'NonWhole', amount: 1.2}),
+		       checkBalances);
 	  });
 	}
 	describe('dry run', function () {
@@ -417,6 +429,18 @@ describe('FairShare', function () {
 	    checkError('if certificate is reused',
 		       () => g2.redeemFairShareCertificate(certificate),
 		       () => (execute ? {name: 'ReusedCertificate', certificate} : {}),
+		       confirmBalancesUnchanged);
+	    checkError('if amount is negative.',
+		       () => g1.issueFairShareCertificate(-1, 'alice', 'bob', key2, execute),
+		       () => ({name: 'NonPositive', amount: -1}),
+		       confirmBalancesUnchanged);
+	    checkError('if amount is zero.',
+		       () => g1.issueFairShareCertificate(0, 'alice', 'bob', key2, execute),
+		       () => ({name: 'NonPositive', amount: 0}),
+		       confirmBalancesUnchanged);
+	    checkError('if amount is fractional.',
+		       () => g1.issueFairShareCertificate(1.2, 'alice', 'bob', key2, execute),
+		       () => ({name: 'NonWhole', amount: 1.2}),
 		       confirmBalancesUnchanged);
 	  });
 	}

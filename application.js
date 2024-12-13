@@ -9,7 +9,7 @@
 
 // There is a test suite that illustrates the use of this, at spec/applicationSpec.js
 
-import {User, Group, UnknownUser, InsufficientFunds, InsufficientReserves} from './domain.js';
+import {User, Group, NonWhole, FairShareError} from './domain.js' ;
 
 export class ApplicationState { // The specific implementation subclasses this.
   keys = [      // The various state names or dimensions that we track. Checks at runtime.
@@ -47,9 +47,24 @@ export class ApplicationState { // The specific implementation subclasses this.
     const fromGroup = Group.get(group);
     const toGroup = Group.get(currency);
     if (fromGroup === toGroup) return fromGroup.send(amount, user, payee, execute);
+    if (amount % 1) throw new NonWhole({amount}); // Other errors will be triggered downstream, but computeMumble will round and suppress unless we check.
     const receivingCost = toGroup.isFairShare ? toGroup.computeTransferCost(amount) : toGroup.computePurchaseCost(amount),
 	  {cost, balance} = fromGroup.issueFairShareCertificate(receivingCost, user, payee, currency, execute);
     return {cost, balance, certificateCost: receivingCost};
+  }
+  invest(execute) { // Invest or withdraw (if amount is negative).
+    const {user, group, amount} = this.states;
+    const from = Group.get('fairshare'); // Where the reserve currency comes from, via a cert.
+    const to = Group.get(group);         // Where the exechange is, and where the group coin balance comes from.
+    const fromAmount = this.asNumber(amount);
+    const {amount:toAmount, cost:toCost} = to.computeInvestmentCost(fromAmount);
+    const {balance:toBalance} = to.checkSenderBalance(toCost, user); // Make sure now, before we issue the cert.
+
+    let {cost:fromCost, balance:fromBalance, certificate} = from.issueFairShareCertificate(fromAmount, user, user, 'fairshare', execute);
+    const {cost:toCost2, balance:toBalance2, ...rest} = to.invest(certificate, execute);
+    FairShareError.assert(toCost2, toCost, 'cost');
+    FairShareError.assert(toBalance2, toBalance, 'balance');
+    return {fromAmount, fromCost, fromBalance, toAmount, toCost, toBalance, ...rest};
   }
   redeemCertificates(user = this.states.user) { // Collect from any certificates that we may have received.
     let userData = User.get(user);

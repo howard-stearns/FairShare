@@ -1,40 +1,44 @@
 /*
   TODO:
+  - invest/withdraw
+  - Which fillCurrencyMenu calls should be for just the user's groups, and which for all groups?
   - stipend
   - vote
-  - invest, including accounting data
-  - show reserves in group display
+  - do something for invest/withdraw of fairshare group
   - simplify paying other groups/certs
   - disable twist down a group you are not in
-  - genericize (including dynamically addition of group-based css rule, populating users, and populating user menus appropriately)
+  - "reset canned data" menu item to clear persistence and url data
 */
 
-import {User, Group, UnknownUser, InsufficientFunds, InsufficientReserves} from './domain.js';
+import {User as userBinding, Group as groupBinding, UnknownUser, InsufficientFunds, InsufficientReserves, NonPositive, NonWhole} from './domain.js';
 import {ApplicationState} from './application.js';
 
 // The following are not strictly necessary as they are defined globally, but making it explicit is more robust and aids developer tools.
 var {URL, URLSearchParams, localStorage, addEventListener} = window; // Defined by Javascript.
 var {componentHandler, QRCodeStyling} = window;    // Defined by Material Design Lite and qr code libraries.
-var {subtitle, paymeCurrency, fromCurrency, groupFilter, userButton,
-     payee, groupsList, currency, currencyExchanged,
+var {subtitle, groupFilter, userButton, payee, groupsList,
+     paymeCurrency, fromCurrency, currency, currencyExchanged, investmentPool, investmentCurrency, payAmount,
+     poolCoin, poolReserve, portionCoin, portionReserve, balanceCoin, balanceReserve, investCoin, investReserve, afterCoin, afterReserve, investButton,
      fromCost, fromBefore, fromAfter, payButton, snackbar, bridgeCost, qrDisplay, paymeURL,
      errorTitle, errorMessage, errorDialog,
      groupTemplate, groupMemberTemplate, paymentTemplate} = window; // Defined by index.html elements with id= attribute.
+
+// Expose to browser console for debugging. Alas, we need to rename them on import so that they can be exported correctly.
+export const Group = groupBinding, User = userBinding;
 
 class App extends ApplicationState {
   // These are called when their key's value is changed, and are used to set things up to match the change.
   section(state) {
     subtitle.textContent = state;
-    if (state === 'pay') setTimeout(updatePaymentCosts);
   }
   group(state) {
     let name = Group.get(state)?.name || 'pick one';
-    paymeCurrency.textContent = name;
-    fromCurrency.textContent = name;
+    paymeCurrency.textContent = fromCurrency.textContent = investmentCurrency.textContent = investmentPool.textContent = name;
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
     updateQRDisplay({payee: this.pending.user || this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
     if (state) document.getElementById(state).scrollIntoView();
     this.setPayment();
+    this.setInvestment();    
   }
   groupFilter(state) { // Set the toggle.
     if (groupFilter.checked === !!state) return;
@@ -76,12 +80,17 @@ class App extends ApplicationState {
     this.setPayment();
   }
   amount(state) {
-    document.querySelector('[for="payAmount"]').textContent = state;
+    if (this.asNumber(state) >= 0) payAmount.value = state;
+    investReserve.value = state;
     this.setPayment();
+    this.setInvestment();
   }
 
   setPayment() { // Set up whatever can be set up about payment display.
-    setTimeout(() => this.pay(false)); // Values are not set yet.
+    setTimeout(() => this.pay(false)); // Delay because this can be called during merge when states are not yet set to their new values.
+  }
+  setInvestment() { // Set up whatever can be set up about investment display.
+    setTimeout(() => this.invest(false));
   }
     
   pay(execute) {
@@ -113,21 +122,63 @@ class App extends ApplicationState {
       document.body.classList.toggle('payment-bridge', certificateCost !== undefined);
       if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${currencyName} to ${payeeName}`});
     } catch (error) {
-      let message; // Can only be localized to language here in the app.
+      let message = this.errorMessage(error); // Can only be localized to language here in the app.
       if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
-	const {inputAmount, outputAmount, outputReserve} = error;
-	message = `You need ${outputAmount} FairShares from ${fromGroup.name}, but the reserves there only have ${outputReserve}.`;
+	const {inputAmount} = error;
 	setCosts(inputAmount, getBalance() - inputAmount);
       } else if (error instanceof InsufficientFunds) {
-	const {cost, balance, groupName} = error;
-	message = `You need ${cost} ${groupName}, but you only have ${balance}.`;
+	const {cost, balance} = error;
 	setCosts(cost, balance);
-      } else {
-	message = error.message;
       }
       payButton.disabled = true;
       document.body.classList.remove('payment-bridge'); // It would be nice if we had a cost to show.
       displayError(message, error.name);
+    }
+  }
+  invest(execute) {
+    let {amount, group, user} = this.states;
+    function setCosts({
+      fromAmount = '', fromCost = '', fromBalance = '',
+      toAmount = '', toCost = '', toBalance = '',
+      totalGroupCoinReserve = '', totalReserveCurrencyReserve = '',
+      portionGroupCoinReserve = '', portionReserveCurrencyReserve = ''
+    } = {}) {
+      poolCoin.textContent = totalGroupCoinReserve;
+      poolReserve.textContent = totalReserveCurrencyReserve;
+      portionCoin.textContent = portionGroupCoinReserve;
+      portionReserve.textContent = portionReserveCurrencyReserve,
+      balanceCoin.textContent = fromBalance + fromCost;
+      balanceReserve.textContent = toBalance + toCost;
+      investCoin.textContent = toCost;
+      afterCoin.textContent = toCost ? toBalance : '';
+      afterReserve.textContent = fromCost ? fromBalance : '';
+      if (toCost && fromCost) investButton.removeAttribute('disabled');
+      else investButton.setAttribute('disabled', 'disabled');
+    }
+    if (!group) {
+      setCosts();
+      return;
+    }
+    if (!parseFloat(amount)) {
+      const {balance:toBalance, ...exchangeData} = Group.get(group).userData(user);
+      const {balance:fromBalance} = Group.get('fairshare').userData(user);
+      setCosts({fromBalance, toBalance, ...exchangeData});
+      return;
+    }
+    try {
+      const data = super.invest(execute);
+      setCosts(data);
+    } catch (error) {
+      if (error instanceof InsufficientReserves) {
+	const {inputAmount, outputAmount, reserve, reserveCurrency} = error;
+	if (reserveCurrency) setCosts({fromCost: outputAmount, portionReserveCurrencyReserve: reserve});
+	else setCosts({toCost: outputAmount, portionGroupCoinRserve: reserve});
+      } else if (error instanceof InsufficientFunds) {
+	const {cost, balance, name} = error;
+	if (name === 'FairShare') setCosts({fromCost:cost, fromBalance:balance});
+	else setCosts({toCost:cost, toBalance:balance});
+      }
+      displayError(this.errorMessage(error));
     }
   }
 
@@ -171,6 +222,19 @@ class App extends ApplicationState {
       this.url.searchParams.set(key, value); // Everything else in the query parameters.
     }
   }
+  errorMessage(error) {
+    if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
+      const {inputAmount, outputAmount, outputReserve, reserveCurrency} = error;
+      return `You need ${outputAmount} ${reserveCurrency ? 'reserve currency' : 'group coin'}, but the exchange pool has only ${outputReserve}.`;
+    }
+    if (error instanceof InsufficientFunds) {
+      const {cost, balance, groupName} = error;
+      return `You need ${cost} ${groupName}, but you only have ${balance}.`;
+    }
+    if (error instanceof NonPositive) return `${error.amount} is not a positive number.`;
+    if (error instanceof NonWhole) return `${error.amount} is not a whole number.`;
+    return error.message;
+  }
 }
 const LocalState = new App();
 
@@ -205,7 +269,7 @@ function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code 
 }
 
 function displayError(message, title = 'Error') { // Show an error dialog to the user.
-  console.error(title, message);
+  console.error(`${title}: ${message}`);
   errorTitle.textContent = title;
   errorMessage.textContent = message;
   errorDialog.showModal();
@@ -231,7 +295,8 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
   const stipendId = key + '-stipend';
   stipendRow.querySelector('input').setAttribute('id', stipendId);
   stipendRow.querySelector('label').setAttribute('for', stipendId);
-  fillCurrencyMenu(key, name, 'ul[data-mdl-for="currencyButton"]'); // For payments menu. Any/all currencies, not just the user's groups.
+  fillCurrencyMenu(key, name, 'ul[data-mdl-for="currencyButton"]');
+  fillCurrencyMenu(key, name, 'ul[data-mdl-for="investmentPoolButton"]');
   const peopleList = groupElement.querySelector('.people');
   peopleList.innerHTML = '';
   for (const personKey in people) {
@@ -261,12 +326,21 @@ function fillCurrencyMenu(key, name, listSelector) {
 
 
 // These onclick handlers are wired in index.html. They are exported so that index.html can reference them.
+
+export function updatePaymentCosts() { // Update display
+  LocalState.merge({amount: payAmount.value});
+}
+export function updateInvestmentCosts() { // Update display
+  LocalState.merge({amount: investReserve.value});
+}
 export function pay() { // Actually pay someone (or display error)
   LocalState.pay(true);
   updateGroupDisplay(LocalState.states.group);
 }
-export function updatePaymentCosts() { // Update display
-  LocalState.merge({amount: document.querySelector('input[for="payAmount"]').value});
+export function invest() { // Acutally invest or withdraw from exchange (or display error)
+  LocalState.invest(true);
+  updateGroupDisplay(LocalState.states.group);
+  updateGroupDisplay('fairshare');
 }
 
 export function toggleGroup(event) { // Open accordian for group, and make that one current.
@@ -282,6 +356,7 @@ export function toggleGroup(event) { // Open accordian for group, and make that 
 export function chooseGroup(event) { // For someone to pay you. Becomes default group.
   LocalState.merge({group: event.target.dataset.key});
   updatePaymentCosts();
+  updateInvestmentCosts();
 }
 export function chooseCurrency(event) { // What the payment is priced in
   LocalState.merge({currency: event.target.dataset.key});
@@ -289,6 +364,7 @@ export function chooseCurrency(event) { // What the payment is priced in
 }
 export function changeAmount() {
   updatePaymentCosts();
+  updateInvestmentCosts();
 }
 export  function userMenu(event) { // Act on user's choice in the user context menu.
   const state = event.target.dataset.key;

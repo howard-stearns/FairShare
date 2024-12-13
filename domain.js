@@ -26,12 +26,17 @@ export class FairShareError extends Error {
     if (!name) name = this.constructor.name; // Default Error.name isn't helpful, and cannot use 'this' before calling super.
     Object.assign(this, {name, ...properties});
   }
+  static assert(actual, expected, label) {
+    if ( actual !== expected) throw new this({message: `Actual ${label} ${actual} does not match computed ${label} ${expected}. This should never happen.`});
+  }
 }
 export class UnknownUser extends FairShareError { }
 export class InsufficientFunds extends FairShareError { }
 export class InsufficientReserves extends InsufficientFunds { }
 export class ReusedCertificate extends FairShareError { }
-
+export class InvalidInput extends FairShareError {}
+export class NonPositive extends InvalidInput {}
+export class NonWhole extends InvalidInput {}
 
 // There are two subclasses: User and Group, below.
 class SharedObject { // Stateful object that are replicated among all who have access.
@@ -77,10 +82,24 @@ export class Group extends SharedObject { // Represent a group with currency, ex
   static get list() { // List all the Groups.
     return Object.keys(this.directory);
   }
-  constructor({fee, totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, ...props}) {
+  constructor({fee, people = {},
+	       totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, // In the real app, these should initially be zero.
+	       ...props}) {
     // fee here is a percent, rather than an number less than 1.
-    const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, fee: fee/100});
-    super({exchange, fee, ...props});
+    const portions = {}, evenPortion = 1 / Object.keys(people).length;
+    for (const key in people) portions[key] = evenPortion;
+    const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, portions, fee: fee/100});
+    super({exchange, fee, people, ...props});
+  }
+  userData(user) { // Answer data pertaining to this user
+    const {totalReserveCurrencyReserve, totalGroupCoinReserve, portions} = this.exchange;
+    const portion = portions[user] || 0;
+    return {
+      balance: this.people[user]?.balance,
+      portionGroupCoinReserve: roundDownToNearest(totalGroupCoinReserve * portion),
+      portionReserveCurrencyReserve: roundDownToNearest(totalReserveCurrencyReserve * portion),
+      totalGroupCoinReserve, totalReserveCurrencyReserve
+    };
   }
 
   computeTransferCost(amount) { // Apply the group fee to answer the cost for transfering amount within the group.
@@ -97,8 +116,14 @@ export class Group extends SharedObject { // Represent a group with currency, ex
   computeCertificateCost(amount) { // How much of this group's currency is needed to exchange for amount of reserve currency.
     return this.exchange.computeBuyAmount(amount, this.exchange.totalGroupCoinReserve, this.exchange.totalReserveCurrencyReserve);
   }
+  computeInvestmentCost(reserveCurrencyAmount) { // How much of this group's coin must be included to match the stated investment amount.
+    let amount = roundUpToNearest(this.exchange.computeGroupCoinAmount(reserveCurrencyAmount));
+    return {amount, cost: amount}; // No fee to invest here. (But reserve currency will charge for issuing a cert.)
+  }
 
   send(amount, user, payee, execute = false) {
+    if (amount <= 0) this.throwNonPositive(amount);
+    if (amount % 1) this.throwNonWhole(amount);
     // Return {cost, balance}, where balance is what would remain for current user after sending.
     // If execute, atomically subtracts cost from user balance and adds amount to payee. (cost - amount) is removed from circulation.
     const cost = this.computeTransferCost(amount);
@@ -106,7 +131,7 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const receiverData = this.people[payee];
     if (!receiverData) this.throwUnknownUser(payee);
 
-    const {senderData, balance} = this.checkSenderBalance(cost, user, execute);
+    const {senderData, balance} = this.checkSenderBalance(cost, user);
     if (execute) {
       senderData.balance = balance;
       receiverData.balance += amount;
@@ -117,6 +142,8 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     // Return {cost, balance), where balance is what would remain for current user after sending.
     // If execute, atomically subtracts cost from member balance and adds a cert for FairShares to payee.
     // (The cert will be redeemed by the user.)
+    if (amount <= 0) this.throwNonPositive(amount);
+    if (amount % 1) this.throwNonWhole(amount);
     const fromFairShare = this.isFairShare;
     const cost = fromFairShare ?
 	  this.computeTransferCost(amount) :                     // As for send.
@@ -124,17 +151,21 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const receiverData = User.get(payee);                        // General User object. We might not be a member of currency to get data there.
     if (!receiverData) this.throwUnknownUser(payee, 'any');
 
-    const {senderData, balance} = this.checkSenderBalance(cost, user, execute); // As for send. Throws error if insufficient balance.
-    if (execute) { // We have completed our tests and deducted from sender balance.
+    const {senderData, balance} = this.checkSenderBalance(cost, user); // As for send. Throws error if insufficient balance.
+    if (execute) { // We thave completed our tests and deducted from sender balance.
       if (!fromFairShare) {
 	const cost2 = this.exchange.buyReserveCurrency(amount);
-	if (cost2 !== cost) throw new FairShareError(`Actual cost ${cost2} does not match computed cost ${cost}. This should never happen.`);
+	FairShareError.assert(cost2, cost, 'cost');
       }
+
       const number = receiverData.nextCertificateNumber;
-      receiverData.receiveCertificate({payee, amount, currency, number}); // Currency is advisory. See redeem...
+      const certificate = {payee, amount, currency, number};
+      receiverData.receiveCertificate(certificate); // Currency is advisory. See redeem...
       senderData.balance = balance;
+      return {cost, balance, certificate};                        // As for send.
     }
-    return {cost, balance};                                      // As for send.
+    const certificate = {amount, payee}; // Not valid for payment (no number), but conveys information.
+    return {cost, balance, certificate};
   }
   redeemFairShareCertificate(cert) { // Redeem cert, adding to balance (and reserves if appropriate). Error if bogus (including reused cert).
     const {payee} = cert;
@@ -147,6 +178,24 @@ export class Group extends SharedObject { // Represent a group with currency, ex
 	  this.exchange.sellReserveCurrency(amount);
     payeeData.balance += groupCoinCredit;
     return groupCoinCredit;
+  }
+  invest(certificate, execute) { // Add certified amount of reserve currency to exchange, along with a corresponding amount of group curreny.
+    // user is specified in cert. If execute, subtract cost from user's balance, and update all exchange stats.
+    const {amount:amountReserveCurrency, payee:user} = certificate; // FIXME: check number if execute
+    const userData = this.people[user];       // The above should be regularized, and include these two steps.
+    if (!userData) this.throwUnknownUser(user);
+    const amountGroupCoin = roundUpToNearest(this.exchange.computeGroupCoinAmount(amountReserveCurrency));
+    
+    const {cost, totalGroupCoinReserve, totalReserveCurrencyReserve, portionGroupCoinReserve, portionReserveCurrencyReserve} =
+	  this.exchange.invest(amountReserveCurrency, user, false);
+    let {balance} = userData;
+    balance -= cost;
+    if (execute) userData.balance = balance;
+    return {
+      cost, balance,
+      totalGroupCoinReserve, totalReserveCurrencyReserve,
+      portionGroupCoinReserve, portionReserveCurrencyReserve,
+    };      
   }
 
   get isFairShare() { // Are we the FairShare group?
@@ -169,11 +218,17 @@ export class Group extends SharedObject { // Represent a group with currency, ex
   throwInsufficientFunds(balance, cost) {
     throw new InsufficientFunds({balance, cost, groupName: this.name});
   }
+  throwNonPositive(amount) {
+    throw new NonPositive({amount});
+  }
+  throwNonWhole(amount) {
+    throw new NonWhole({amount});
+  }
 }
 
 export class Exchange { // Implements the math of Uniswap V1.
-  constructor({totalGroupCoinReserve, totalReserveCurrencyReserve, fee = 0.003}) {
-    Object.assign(this, {totalGroupCoinReserve, totalReserveCurrencyReserve, fee});
+  constructor({fee = 0.003, ...properties}) {
+    Object.assign(this, {fee, ...properties});
   }
   scale = 1;
   get scaledInverseFee() { return this.scale * (1 - this.fee); }
@@ -199,6 +254,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     const inputAmount = numerator / denominator;
     return roundUpToNearest(inputAmount, this.scale);
   }
+
   reportTransaction({label, inputAmount, outputAmount, inputReserve, outputReserve, report=false}) {
     if (!report) return;
     const {totalReserveCurrencyReserve, totalGroupCoinReserve} = this;
@@ -208,8 +264,8 @@ export class Exchange { // Implements the math of Uniswap V1.
     const kAfter = totalReserveCurrencyReserve * totalGroupCoinReserve;
     console.log({label, inputAmount, outputAmount, fee, rate, inputReserve, outputReserve, totalReserveCurrencyReserve, totalGroupCoinReserve, kBefore, kAfter});
   }
-  checkReserves(inputAmount, outputAmount, reserveCurrency) {
-    let reserve = reserveCurrency ? this.totalReserveCurrencyReserve : this.totalGroupCoinReserve;
+  checkReserves(inputAmount, outputAmount, reserveCurrency,
+		reserve = reserveCurrency ? this.totalReserveCurrencyReserve : this.totalGroupCoinReserve) {
     if (outputAmount >= reserve) throw new InsufficientReserves({inputAmount, outputAmount, reserve, reserveCurrency});
   }
   
@@ -218,7 +274,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     const inputReserve = this.totalGroupCoinReserve;
     const outputReserve = this.totalReserveCurrencyReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
-    this.checkReserves(amount, outputAmount, true);
+    this.checkReserves(inputAmount, outputAmount, true);
     this.totalGroupCoinReserve += inputAmount;
     this.totalReserveCurrencyReserve -= outputAmount;
     this.reportTransaction({label: 'sellGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
@@ -229,7 +285,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     const inputReserve = this.totalReserveCurrencyReserve;
     const outputReserve = this.totalGroupCoinReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
-    this.checkReserves(amount, outputAmount, false);
+    this.checkReserves(inputAmount, outputAmount, false);
     this.totalGroupCoinReserve -= outputAmount;
     this.totalReserveCurrencyReserve += inputAmount;
     this.reportTransaction({label: 'sellPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
@@ -240,7 +296,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     const outputReserve = this.totalGroupCoinReserve;
     const inputReserve = this.totalReserveCurrencyReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
-    this.checkReserves(amount, outputAmount, false);
+    this.checkReserves(inputAmount, outputAmount, false);
     this.totalReserveCurrencyReserve += inputAmount;
     this.totalGroupCoinReserve -= outputAmount;
     this.reportTransaction({label: 'buyGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});
@@ -251,11 +307,54 @@ export class Exchange { // Implements the math of Uniswap V1.
     const outputReserve = this.totalReserveCurrencyReserve;
     const inputReserve = this.totalGroupCoinReserve;
     const inputAmount = this.computeBuyAmount(outputAmount, inputReserve, outputReserve);
-    this.checkReserves(amount, outputAmount, true);
+    this.checkReserves(inputAmount, outputAmount, true);
     this.totalReserveCurrencyReserve -= outputAmount;
     this.totalGroupCoinReserve += inputAmount;
     this.reportTransaction({label: 'buyPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});
     return inputAmount;
+  }
+  computeReserveCurrencyAmount(groupCoinAmount) { // Not counting any fees.
+    const {totalGroupCoinReserve, totalReserveCurrencyReserve, portions} =  this;
+    return totalReserveCurrencyReserve * groupCoinAmount / totalGroupCoinReserve;
+  }
+  computeGroupCoinAmount(amountReserveCurrency) { // Not counting any fees.
+    const {totalGroupCoinReserve, totalReserveCurrencyReserve, portions} =  this;
+    return totalGroupCoinReserve * amountReserveCurrency / totalReserveCurrencyReserve;
+  }
+  invest(amountReserveCurrency, user, execute) {
+    // Given the positive or negative amount to be added after fees,, return the group coin cost and other stats,
+    // and update the exchange if execute. Throw error if not enough reserves to withdraw.
+    // The amountReserveCurrency is exact - the group coin amount is rounded down, and cost is computed and rounded up.
+    // We add a fee to the group coin costs IFF this is a withdrawl (amount < 0).
+    const {totalGroupCoinReserve, totalReserveCurrencyReserve, portions} =  this;
+    const portion = portions[user] || 0;
+
+    let portionGroupCoinReserve = portion * totalGroupCoinReserve;
+    let portionReserveCurrencyReserve = portion * totalReserveCurrencyReserve;
+
+    let amountCoin = this.computeGroupCoinAmount(amountReserveCurrency);
+    let cost = roundUpToNearest(amountReserveCurrency < 0 ? amountReserveCurrency * (1+this.fee) : amountReserveCurrency);
+
+    // After computing cost on the exact amount.
+    amountCoin = roundUpToNearest(amountCoin);
+    portionGroupCoinReserve = roundDownToNearest(portionGroupCoinReserve);
+    portionReserveCurrencyReserve = roundDownToNearest(portionReserveCurrencyReserve);
+
+    this.checkReserves(amountReserveCurrency, amountReserveCurrency, true, portionReserveCurrencyReserve);
+    this.checkReserves(amountCoin, cost, false, portionGroupCoinReserve);
+
+    if (execute) {
+      this.totalGroupCoinReserve += amountReserveCurrency;
+      this.totalReserveCurrencyReserve += amountReserveCurrency;
+      for (const key in portions) { // Adjusts everyone's portion based on fraction of totalReserveCurrencyReserve.
+	let before = portions[key] * totalReserveCurrencyReserve;
+	portions[key] = before / this.totalReserveCurrencyReserve;
+      }
+      // Recompute ours (which might or might not have been present before).
+      portions[user] = (portionReserveCurrencyReserve + amountReserveCurrency) / this.totalReserveCurrencyReserve;
+
+    }
+    return {cost, totalGroupCoinReserve, totalReserveCurrencyReserve, portionGroupCoinReserve, portionReserveCurrencyReserve};
   }
 }
 

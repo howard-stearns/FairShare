@@ -58,9 +58,11 @@ double-labeled-switch .switch-label { padding-right: 16px; }
     margin: 16px;
 }
 #groups .mdl-textfield,
+#invest .mdl-textfield,
 #pay .mdl-textfield {
-    width: 70px;
+    width: 100px;
 }
+#invest input::placeholder { font-size: 10px; }
 .currency, #qrDisplay { display: flex; justify-content: center; }
 .avatar-button { height: 40px; width: 40px; }
 .identicon {

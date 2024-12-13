@@ -3,6 +3,7 @@
 // after installing with: npm install --global jasmine
 
 import {ApplicationState} from '../application.js';
+import {Group} from '../domain.js';
 
 describe('Application', function () {
   let storage, changed, LocalState;
@@ -83,10 +84,27 @@ describe('Application', function () {
     });
   });
 
-  describe('payment', function () {
-    it('does something', function () {
-      LocalState.merge({user: 'alice', group: 'apples', currency: 'apples', payee: 'bob', amount: 10});
-      LocalState.pay(false);
+  describe('operations', function () {
+    beforeAll(function () {
+      Group.create({ name: "Apples", fee: 1, stipend: 1, img: "apples.jpeg", people: { alice: {balance: 100}, bob: {balance: 200} }});
+      Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
+    });
+    describe('payment', function () {
+      it('does something', function () {
+	LocalState.merge({user: 'alice', group: 'apples', currency: 'apples', payee: 'bob', amount: 10});
+	LocalState.pay(false);
+      });
+    });
+    describe('investment', function () {
+      it('invest does something.', function () {
+	LocalState.merge({user: 'alice', group: 'apples', amount: 10});
+	const data = LocalState.invest(false);
+	console.log(data);
+      });
+      // it('withdraw does something.', function () {
+      //   LocalState.merge({user: 'alice', group: 'apples', amount: -10});
+      //   LocalState.invest(false);
+      // });
     });
   });
 });
