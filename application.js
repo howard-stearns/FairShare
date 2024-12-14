@@ -52,19 +52,36 @@ export class ApplicationState { // The specific implementation subclasses this.
 	  {cost, balance} = fromGroup.issueFairShareCertificate(receivingCost, user, payee, currency, execute);
     return {cost, balance, certificateCost: receivingCost};
   }
-  invest(execute) { // Invest or withdraw (if amount is negative).
+  invest(execute) { // Make a certificate for amount of FairShare, and use that and the appropriate amount of group currency to invest in the group exchange pool.
+    // Update balances and such if execute.
     const {user, group, amount} = this.states;
+    const fromAmount = this.asNumber(amount);
+    if (fromAmount < 0) return this.withdraw(execute);
     const from = Group.get('fairshare'); // Where the reserve currency comes from, via a cert.
     const to = Group.get(group);         // Where the exechange is, and where the group coin balance comes from.
-    const fromAmount = this.asNumber(amount);
     const {amount:toAmount, cost:toCost} = to.computeInvestmentCost(fromAmount);
     const {balance:toBalance} = to.checkSenderBalance(toCost, user); // Make sure now, before we issue the cert.
-
+    // Now issue cert and invest in exchange.    
     let {cost:fromCost, balance:fromBalance, certificate} = from.issueFairShareCertificate(fromAmount, user, user, 'fairshare', execute);
     const {cost:toCost2, balance:toBalance2, ...rest} = to.invest(certificate, execute);
     FairShareError.assert(toCost2, toCost, 'cost');
     FairShareError.assert(toBalance2, toBalance, 'balance');
     return {fromAmount, fromCost, fromBalance, toAmount, toCost, toBalance, ...rest};
+  }
+  withdraw(execute) { // Remove amount and corresponding amount of group currency from group exchange pool. If execute, add to group balance and to FairShare balance (via a cert).
+    const {user, group, amount} = this.states;
+    const from = Group.get('fairshare'); // Where the reserve currency comes from, via a cert.
+    const to = Group.get(group);         // Where the exechange is, and where the group coin balance comes from.
+    const fromAmount = this.asNumber(amount);
+    const {certificate, ...poolData}  = to.withdraw(fromAmount, user, execute);
+
+    // TODO: rationalize this.
+    let fromBalance = from.people[user].balance;
+    if (execute) poolData.fromCost = -from.redeemFairShareCertificate(certificate); // certs are always positive
+    else poolData.fromCost = -from.computeReceiveCredit(certificate.amount);
+    poolData.fromBalance = fromBalance - poolData.fromCost; 
+
+    return poolData;
   }
   redeemCertificates(user = this.states.user) { // Collect from any certificates that we may have received.
     let userData = User.get(user);

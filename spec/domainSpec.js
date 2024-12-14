@@ -8,7 +8,7 @@
 // TODO: Create a way to test that redeeming a certificate for more than the target reserves will fail.
 
 import {roundUpToNearest, roundDownToNearest, User, Group, Exchange} from '../domain.js';
-//jasmine.getEnv().configure({random: false}); // Whether or not to randomize the order.
+jasmine.getEnv().configure({random: false}); // Whether or not to randomize the order.
 
 describe('FairShare', function () {
 

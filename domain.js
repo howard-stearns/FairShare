@@ -157,15 +157,21 @@ export class Group extends SharedObject { // Represent a group with currency, ex
 	const cost2 = this.exchange.buyReserveCurrency(amount);
 	FairShareError.assert(cost2, cost, 'cost');
       }
-
-      const number = receiverData.nextCertificateNumber;
-      const certificate = {payee, amount, currency, number};
-      receiverData.receiveCertificate(certificate); // Currency is advisory. See redeem...
+      const certificate = this.generateCertificate(amount, payee, currency);
       senderData.balance = balance;
       return {cost, balance, certificate};                        // As for send.
     }
-    const certificate = {amount, payee}; // Not valid for payment (no number), but conveys information.
+    const certificate = this.generateCertificate(amount, payee); // Not valid for payment (no number), but conveys information.
     return {cost, balance, certificate};
+  }
+  generateCertificate(amount, payee, currency = '') {
+    if (!currency) return {amount, payee};
+    if (amount <= 0) this.throwNonPositive(amount);
+    const receiverData = User.get(payee);
+    const number = receiverData.nextCertificateNumber;
+    const certificate = {payee, amount, currency, number};
+    receiverData.receiveCertificate(certificate); // Currency is advisory. See redeem...
+    return certificate;
   }
   redeemFairShareCertificate(cert) { // Redeem cert, adding to balance (and reserves if appropriate). Error if bogus (including reused cert).
     const {payee} = cert;
@@ -186,16 +192,24 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     if (!userData) this.throwUnknownUser(user);
     const amountGroupCoin = roundUpToNearest(this.exchange.computeGroupCoinAmount(amountReserveCurrency));
     
-    const {cost, totalGroupCoinReserve, totalReserveCurrencyReserve, portionGroupCoinReserve, portionReserveCurrencyReserve} =
-	  this.exchange.invest(amountReserveCurrency, user, false);
+    const {cost, ...poolData} =
+	  this.exchange.invest(amountReserveCurrency, user, execute);
     let {balance} = userData;
     balance -= cost;
     if (execute) userData.balance = balance;
-    return {
-      cost, balance,
-      totalGroupCoinReserve, totalReserveCurrencyReserve,
-      portionGroupCoinReserve, portionReserveCurrencyReserve,
-    };      
+    return {cost, balance, ...poolData};
+  }
+  withdraw(amount, user, execute) { // Remove amount of reserve currency and corresponding group investment, and report figures, issuing a
+    // certificate for the reserve currency. If execute, the certificate is real and balances are adjusted.
+    let {senderData, balance:toBalance} = this.checkSenderBalance(0, user); // Make sure they are a member now, before we pull from exchange.
+    const {cost, ...poolData} = this.exchange.invest(amount, user, execute);
+    const certificate = this.generateCertificate(-amount, user, execute ? 'fairshare' : '');
+    const toCost = this.computeReceiveCredit(cost);
+    toBalance -= toCost; // Adds the negative to increase balance.
+    if (execute) {
+      senderData.balance = toBalance;
+    }
+    return {toCost, toBalance, certificate, ...poolData};
   }
 
   get isFairShare() { // Are we the FairShare group?

@@ -98,13 +98,15 @@ describe('Application', function () {
     describe('investment', function () {
       it('invest does something.', function () {
 	LocalState.merge({user: 'alice', group: 'apples', amount: 10});
-	const data = LocalState.invest(false);
-	console.log(data);
+	console.log(
+	  LocalState.invest(false) );
       });
-      // it('withdraw does something.', function () {
-      //   LocalState.merge({user: 'alice', group: 'apples', amount: -10});
-      //   LocalState.invest(false);
-      // });
+      it('withdraw does something.', function () {
+        LocalState.merge({user: 'alice', group: 'apples', amount: -10});
+	console.log(
+		     LocalState.invest(false),
+		   );
+      });
     });
   });
 });
