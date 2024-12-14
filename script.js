@@ -4,7 +4,6 @@
   - vote
   - do something for invest/withdraw of fairshare group
   - simplify paying other groups/certs
-  - disable twist down a group you are not in
 */
 
 import {User as userBinding, Group as groupBinding, UnknownUser, InsufficientFunds, InsufficientReserves, NonPositive, NonWhole} from './domain.js';
@@ -53,23 +52,22 @@ class App extends ApplicationState {
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="currencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="investmentPoolButton"]').innerHTML = '';
-    for (const groupElement of groupsList.children) {
+    Group.list.forEach(key => updateGroupDisplay(key));
+    for (const groupElement of groupsList.children) { // fixme: combine with update group display
       const key = groupElement.id,
-	    group = Group.get(key);
-      if (!group) continue; // e.g., a template
-      const groupUserData = group.people[state],
-	    isMember = groupUserData && !groupUserData.isCandidate,
+	    group = Group.get(key),
+	    userGroupData = group?.userData(state),
 	    checkbox = groupElement.querySelector('expanding-li label.mdl-checkbox');
+      if (!group) continue; // e.g., a template
       componentHandler.upgradeElement(checkbox); // Otherwise no MaterialCheckbox. (A quirk of Material Design Lite.)
-      updateGroupBalance(groupElement, groupUserData?.balance);
-      checkbox.MaterialCheckbox[isMember ? 'check' : 'uncheck']();
-      if (isMember) {
-	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]');        // payme currency
-	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]');   // pay from 
-	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="currencyButton"]');       // pay to
-	if (key !== 'fairshare') { // Cannot exchange from fairshare pool yet
-	  fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="investmentPoolButton"]'); // investment exchange
-	}
+      checkbox.MaterialCheckbox[userGroupData ? 'check' : 'uncheck']();
+      if (!userGroupData) continue;
+      updateGroupBalance(groupElement, userGroupData?.balance);
+      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]');        // payme currency
+      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]');   // pay from 
+      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="currencyButton"]');       // pay to
+      if (key !== 'fairshare') { // Cannot exchange from fairshare pool yet
+	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="investmentPoolButton"]'); // investment exchange
       }
     }
   }
@@ -99,17 +97,15 @@ class App extends ApplicationState {
   pay(execute) {
     let {payee, amount, currency, group, user} = this.states;
     amount = this.asNumber(amount);
-    const fromGroup = Group.get(group);
+    const fromGroup = Group.get(group),
+	  data = fromGroup?.userData(user);
     function setCosts(cost, balance) {
       fromCost.textContent = cost;
       fromAfter.textContent = balance;
       fromBefore.textContent = balance + cost;
     }
-    function getBalance() { // Ugh
-      return Group.get(group)?.people[user]?.balance || 0;
-    }
     if (!(amount && group && currency && user && payee)) {
-      setCosts(0, getBalance());
+      setCosts(0, data?.balance);
       payButton.disabled = true;
       document.body.classList.remove('payment-bridge');
       return;
@@ -128,7 +124,7 @@ class App extends ApplicationState {
       let message = this.errorMessage(error); // Can only be localized to language here in the app.
       if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
 	const {inputAmount} = error;
-	setCosts(inputAmount, getBalance() - inputAmount);
+	setCosts(inputAmount, data ? data.balance- inputAmount: '');
       } else if (error instanceof InsufficientFunds) {
 	const {cost, balance} = error;
 	setCosts(cost, balance);
@@ -279,17 +275,23 @@ function displayError(message, title = 'Error') { // Show an error dialog to the
 }
 
 function updateGroupBalance(groupElement, balance = '') { // 0 is '0', but undefined becomes ''.
-  // FIXME: docstring and include membership-based checkbox updates?
   for (const element of groupElement.querySelectorAll('.balance')) element.textContent = balance;
 }
 
 function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
   if (!key) return;
-  const {name, img, people, fee, stipend} = Group.get(key);
+  const group = Group.get(key),
+	{name, img} = group,
+	user = LocalState.getState('user'),
+	userGroupData = group.userData(user);
   groupElement.querySelector('expanding-li .mdl-list__item-avatar').setAttribute('src', `images/${img}`);
   groupElement.querySelector('expanding-li .group-name').textContent = name;
+  console.log({key, user, userGroupData});
+  if (!userGroupData) return;
+  const {fee, stipend, balance, members} = userGroupData;
+  updateGroupBalance(groupElement, balance);
   groupElement.querySelector('.fee').textContent = fee;  
-  groupElement.querySelector('.stipend').textContent = stipend;
+  groupElement.querySelector('.stipend').textContent = stipend;  
   const feeRow = groupElement.querySelector('row:has(.fee)');
   const feeId = key + '-fee';
   feeRow.querySelector('input').setAttribute('id', feeId);
@@ -300,11 +302,9 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
   stipendRow.querySelector('label').setAttribute('for', stipendId);
   const peopleList = groupElement.querySelector('.people');
   peopleList.innerHTML = '';
-  for (const personKey in people) {
-    const {balance, isCandidate = false} = people[personKey];
+  for (const {key:personKey, isCandidate} of members) {
     const personElement = groupMemberTemplate.content.cloneNode(true);
     const user = User.get(personKey);
-    if (personKey === LocalState.states.user) updateGroupBalance(groupElement, balance);
     personElement.querySelector('.membership-action-label').textContent = isCandidate ? 'endorse' : 'expel';
     personElement.querySelector('row > span').textContent = user.name;
     peopleList.append(personElement);
@@ -314,7 +314,7 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
 function makeGroupDisplay(key) { // Render the data for a group and it's members.
   const groupElement = groupTemplate.content.cloneNode(true).querySelector('li');
   groupElement.setAttribute('id', key);
-  updateGroupDisplay(key, groupElement);
+  //updateGroupDisplay(key, groupElement);
   groupsList.append(groupElement);
 }
 

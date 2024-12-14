@@ -33,8 +33,8 @@ export class ApplicationState { // The specific implementation subclasses this.
     this.states = merged; // After update1, and before save.
     if (isChanged) this.save();
   }
-  getState(key) { // Return a single current state value by key.
-    return this.states[key];
+  getState(key) { // Return a single current state value by key. Also checks pending!
+    return this.pending[key] || this.states[key];
   }
   asNumber(string) { // state values are strings
     return parseFloat(string || '0');

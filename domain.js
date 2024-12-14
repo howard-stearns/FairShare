@@ -91,10 +91,19 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const exchange = new Exchange({totalGroupCoinReserve, totalReserveCurrencyReserve, portions, fee: fee/100});
     super({exchange, fee, people, ...props});
   }
-  userData(user) { // Answer data pertaining to this user
+  userData(user) { // Answer data pertaining to this user IFF they are member, else null;
+    const {people, fee, stipend} = this;
+    const person = people[user];
+    if (!person || person.isCandidate) return null;
     const {totalReserveCurrencyReserve, totalGroupCoinReserve, portions} = this.exchange;
     const portion = portions[user] || 0;
+    let members = [];
+    Object.keys(people).forEach(key => {
+      const {isCandidate} = people[key];
+      members.push({key, isCandidate});
+    });
     return {
+      fee, stipend, members,
       balance: this.people[user]?.balance,
       portionGroupCoinReserve: roundDownToNearest(totalGroupCoinReserve * portion),
       portionReserveCurrencyReserve: roundDownToNearest(totalReserveCurrencyReserve * portion),
@@ -164,15 +173,6 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const certificate = this.generateCertificate(amount, payee); // Not valid for payment (no number), but conveys information.
     return {cost, balance, certificate};
   }
-  generateCertificate(amount, payee, currency = '') {
-    if (!currency) return {amount, payee};
-    if (amount <= 0) this.throwNonPositive(amount);
-    const receiverData = User.get(payee);
-    const number = receiverData.nextCertificateNumber;
-    const certificate = {payee, amount, currency, number};
-    receiverData.receiveCertificate(certificate); // Currency is advisory. See redeem...
-    return certificate;
-  }
   redeemFairShareCertificate(cert) { // Redeem cert, adding to balance (and reserves if appropriate). Error if bogus (including reused cert).
     const {payee} = cert;
     const user = User.get(payee);
@@ -212,10 +212,20 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     return {toCost, toBalance, certificate, ...poolData};
   }
 
+  // Internals
   get isFairShare() { // Are we the FairShare group?
     // Subtle: During testing, we may create many "fairshare" groups with odd lifetimes, such that (this === Group.get('fairshare')
     // might return true if we're not the "current" fairshare group. The following doesn't have that issue.
     return this.name === 'FairShare';
+  }
+  generateCertificate(amount, payee, currency = '') { // Does not add fee. If you leave off currency, it will be a fake/informational "certificate".
+    if (!currency) return {amount, payee};
+    if (amount <= 0) this.throwNonPositive(amount);
+    const receiverData = User.get(payee);
+    const number = receiverData.nextCertificateNumber;
+    const certificate = {payee, amount, currency, number};
+    receiverData.receiveCertificate(certificate); // Currency is advisory. See redeem...
+    return certificate;
   }
   checkSenderBalance(cost, user) { // Return user's data and balance after subtracting cost, and throwing if insufficient or missing.
     const senderData = this.people[user];
