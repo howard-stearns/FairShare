@@ -1,6 +1,5 @@
 /*
   TODO:
-  - invest/withdraw
   - Which fillCurrencyMenu calls should be for just the user's groups, and which for all groups?
   - stipend
   - vote
@@ -8,6 +7,7 @@
   - simplify paying other groups/certs
   - disable twist down a group you are not in
   - "reset canned data" menu item to clear persistence and url data
+  - bug: repeated investment eventually introduces a scroller - adding to menus?
 */
 
 import {User as userBinding, Group as groupBinding, UnknownUser, InsufficientFunds, InsufficientReserves, NonPositive, NonWhole} from './domain.js';
@@ -54,6 +54,8 @@ class App extends ApplicationState {
     document.querySelector(`.mdl-menu > [data-key="${state}"]`).setAttribute('disabled', 'disabled');
     document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
+    document.querySelector('ul[data-mdl-for="currencyButton"]').innerHTML = '';
+    document.querySelector('ul[data-mdl-for="investmentPoolButton"]').innerHTML = '';
     for (const groupElement of groupsList.children) {
       const key = groupElement.id,
 	    group = Group.get(key);
@@ -65,8 +67,12 @@ class App extends ApplicationState {
       updateGroupBalance(groupElement, groupUserData?.balance);
       checkbox.MaterialCheckbox[isMember ? 'check' : 'uncheck']();
       if (isMember) {
-	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]'); // For receiving menu.
-	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]'); // For receiving menu.
+	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]');        // payme currency
+	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]');   // pay from 
+	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="currencyButton"]');       // pay to
+	if (key !== 'fairshare') { // Cannot exchange from fairshare pool yet
+	  fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="investmentPoolButton"]'); // investment exchange
+	}
       }
     }
   }
@@ -295,8 +301,6 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
   const stipendId = key + '-stipend';
   stipendRow.querySelector('input').setAttribute('id', stipendId);
   stipendRow.querySelector('label').setAttribute('for', stipendId);
-  fillCurrencyMenu(key, name, 'ul[data-mdl-for="currencyButton"]');
-  fillCurrencyMenu(key, name, 'ul[data-mdl-for="investmentPoolButton"]');
   const peopleList = groupElement.querySelector('.people');
   peopleList.innerHTML = '';
   for (const personKey in people) {
@@ -317,7 +321,7 @@ function makeGroupDisplay(key) { // Render the data for a group and it's members
   groupsList.append(groupElement);
 }
 
-function fillCurrencyMenu(key, name, listSelector) {
+function fillCurrencyMenu(key, name, listSelector) { // Add key/name group to menu list named by listSelector
   const currencyChoice = paymentTemplate.content.cloneNode(true).firstElementChild;
   currencyChoice.dataset.key = key;
   currencyChoice.textContent = name;
