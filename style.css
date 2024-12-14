@@ -4,6 +4,7 @@ section, group-details, expanding-li button.mdl-button--colored {
     display: none;
 }
 body:not(.allGroups) #groupsList li:has(expanding-li > span > label:not(.is-checked)),
+expanding-li:has(> .mdl-list__item-secondary-action > label:not(.is-checked)) > .mdl-list__item-primary-content button,
 body:not(.payment-bridge) row.payment-bridge,
 body.apples li[id="apples"] button:not(.mdl-button--colored),
 body.bananas li[id="bananas"] button:not(.mdl-button--colored),
