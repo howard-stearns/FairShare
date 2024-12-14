@@ -386,7 +386,7 @@ function hashChange(event, {...props} = {}) { // A change to a different section
   const section = location.hash.slice(1) || 'groups';
   if (section === 'reset') { // specal case
     localStorage.clear();
-    location.href = location.origin + location.pathname;
+    location.href = location.origin + location.pathname + '?';
   }
   LocalState.merge({section, ...props}, true);
 }
