@@ -2,7 +2,7 @@
 
 > Synopsis: A working demonstration of FairShare functionality, as a step towards an MVP. The intent is to make the _operations_ concrete. (Not the look and feel.)
 
-> Status: Available [here](app.html) with canned data, locally persistent across sessions, but without networking across devices.
+> Status: Available **[HERE](app.html)** with canned data, locally persistent across sessions, but without networking across devices.
 
 * auto-gen TOC:
 {:toc}
