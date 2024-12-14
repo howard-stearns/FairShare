@@ -83,9 +83,11 @@ class App extends ApplicationState {
     this.setPayment();
   }
   amount(state) {
-    if (this.asNumber(state) >= 0) payAmount.value = state;
-    investReserve.value = state;
+    payAmount.value = state;
     this.setPayment();
+  }
+  investment(state){
+    investReserve.value = state;
     this.setInvestment();
   }
 
@@ -121,7 +123,7 @@ class App extends ApplicationState {
       payButton.disabled = execute; // Arbitrary design choice: Disable it on successful actual payment.
       bridgeCost.textContent = certificateCost;
       document.body.classList.toggle('payment-bridge', certificateCost !== undefined);
-      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${currencyName} to ${payeeName}`});
+      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${currencyName} to ${payeeName}.`});
     } catch (error) {
       let message = this.errorMessage(error); // Can only be localized to language here in the app.
       if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
@@ -137,7 +139,7 @@ class App extends ApplicationState {
     }
   }
   invest(execute) {
-    let {amount, group, user} = this.states;
+    let {investment, group, user} = this.states;
     function setCosts({
       fromAmount = '', fromCost = '', fromBalance = '',
       toAmount = '', toCost = '', toBalance = '',
@@ -152,15 +154,16 @@ class App extends ApplicationState {
       balanceReserve.textContent = toBalance + toCost;
       investCoin.textContent = toCost;
       afterCoin.textContent = toCost ? toBalance : '';
-      afterReserve.textContent = fromCost ? fromBalance : '';
-      if (toCost && fromCost) investButton.removeAttribute('disabled');
+      afterReserve.textContent = fromBalance;
+      if (toCost) investButton.removeAttribute('disabled');
       else investButton.setAttribute('disabled', 'disabled');
     }
     if (!group) {
       setCosts();
       return;
     }
-    if (!parseFloat(amount)) {
+    investment = this.asNumber(investment);
+    if (!investment) {
       const {balance:toBalance, ...exchangeData} = Group.get(group).userData(user);
       const {balance:fromBalance} = Group.get('fairshare').userData(user);
       setCosts({fromBalance, toBalance, ...exchangeData});
@@ -168,6 +171,7 @@ class App extends ApplicationState {
     }
     try {
       const data = super.invest(execute);
+      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `${investment > 0 ? 'Invested in ' : 'Withdrawn from'} FairShare.`});
       setCosts(data);
     } catch (error) {
       if (error instanceof InsufficientReserves) {
@@ -198,7 +202,7 @@ class App extends ApplicationState {
     this.updateURL(key, state); // Make the internal url reflect state. Used by save().
   }
   // These two are tracked, but we do not add/remove classes for their values (which are from the same set as user & group).
-  unstyled = [ 'payee', 'currency', 'amount' ];
+  unstyled = [ 'payee', 'currency', 'amount', 'investment' ];
 
   // Local application state is saved, um, locally.
   save() { // Persist for next session, and update browser history, too.
@@ -332,7 +336,7 @@ export function updatePaymentCosts() { // Update display
   LocalState.merge({amount: payAmount.value});
 }
 export function updateInvestmentCosts() { // Update display
-  LocalState.merge({amount: investReserve.value});
+  LocalState.merge({investment: investReserve.value});
 }
 export function pay() { // Actually pay someone (or display error)
   LocalState.pay(true);

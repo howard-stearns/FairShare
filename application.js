@@ -20,7 +20,8 @@ export class ApplicationState { // The specific implementation subclasses this.
     'groupFilter', // Whether to show all, or just those that we are a member of.
     'payee',       // Who we are paying (or last paid). Only used in sending money.
     'currency',    // What are currency will the payee be paid in. Only used in sending money.
-    'amount'       // How much will we send.
+    'amount',      // How much will we send.
+    'investment'   // How much we invest. Can be negative.
   ];
 
   merge(states, isChanged = false) { // Set all the specified states, update the display, and save if needed.
@@ -34,7 +35,7 @@ export class ApplicationState { // The specific implementation subclasses this.
     if (isChanged) this.save();
   }
   getState(key) { // Return a single current state value by key. Also checks pending!
-    return this.pending[key] || this.states[key];
+    return this.pending?.[key] || this.states[key];
   }
   asNumber(string) { // state values are strings
     return parseFloat(string || '0');
@@ -54,8 +55,8 @@ export class ApplicationState { // The specific implementation subclasses this.
   }
   invest(execute) { // Make a certificate for amount of FairShare, and use that and the appropriate amount of group currency to invest in the group exchange pool.
     // Update balances and such if execute.
-    const {user, group, amount} = this.states;
-    const fromAmount = this.asNumber(amount);
+    const {user, group, investment} = this.states;
+    const fromAmount = this.asNumber(investment);
     if (fromAmount < 0) return this.withdraw(execute);
     const from = Group.get('fairshare'); // Where the reserve currency comes from, via a cert.
     const to = Group.get(group);         // Where the exechange is, and where the group coin balance comes from.
@@ -69,10 +70,10 @@ export class ApplicationState { // The specific implementation subclasses this.
     return {fromAmount, fromCost, fromBalance, toAmount, toCost, toBalance, ...rest};
   }
   withdraw(execute) { // Remove amount and corresponding amount of group currency from group exchange pool. If execute, add to group balance and to FairShare balance (via a cert).
-    const {user, group, amount} = this.states;
+    const {user, group, investment} = this.states;
     const from = Group.get('fairshare'); // Where the reserve currency comes from, via a cert.
     const to = Group.get(group);         // Where the exechange is, and where the group coin balance comes from.
-    const fromAmount = this.asNumber(amount);
+    const fromAmount = this.asNumber(investment);
     const {certificate, ...poolData}  = to.withdraw(fromAmount, user, execute);
 
     // TODO: rationalize this.
