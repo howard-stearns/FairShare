@@ -6,8 +6,6 @@
   - do something for invest/withdraw of fairshare group
   - simplify paying other groups/certs
   - disable twist down a group you are not in
-  - "reset canned data" menu item to clear persistence and url data
-  - bug: repeated investment eventually introduces a scroller - adding to menus?
 */
 
 import {User as userBinding, Group as groupBinding, UnknownUser, InsufficientFunds, InsufficientReserves, NonPositive, NonWhole} from './domain.js';
@@ -386,7 +384,12 @@ export function filterGroups(event) {
 }
 
 function hashChange(event, {...props} = {}) { // A change to a different section.
-  LocalState.merge({section: location.hash.slice(1) || 'groups', ...props}, true);
+  const section = location.hash.slice(1) || 'groups';
+  if (section === 'reset') { // specal case
+    localStorage.clear();
+    location.href = location.origin + location.pathname;
+  }
+  LocalState.merge({section, ...props}, true);
 }
 
 addEventListener('popstate', event => event.state && LocalState.merge(event.state, true));

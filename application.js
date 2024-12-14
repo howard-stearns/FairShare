@@ -9,7 +9,7 @@
 
 // There is a test suite that illustrates the use of this, at spec/applicationSpec.js
 
-import {User, Group, NonWhole, FairShareError} from './domain.js' ;
+import {User, Group, NonWhole, FairShareError} from './domain.js';
 
 export class ApplicationState { // The specific implementation subclasses this.
   keys = [      // The various state names or dimensions that we track. Checks at runtime.
