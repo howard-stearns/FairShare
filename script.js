@@ -1,6 +1,5 @@
 /*
   TODO:
-  - Which fillCurrencyMenu calls should be for just the user's groups, and which for all groups?
   - stipend
   - vote
   - do something for invest/withdraw of fairshare group
