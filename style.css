@@ -100,3 +100,10 @@ expanding-li {
 expanding-li > .mdl-list__item-primary-content > button {
     margin-left: 6px;
     margin-right: 6px;
+}
+#groups > .page-content,
+#pay > .page-content,
+#invest > .page-content {
+    max-width: 650px;
+    margin: 0 auto;
+}

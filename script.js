@@ -2,6 +2,7 @@
   TODO:
   - stipend
   - vote
+  - what happens when someone does payme for a group you are not in?
   - do something for invest/withdraw of fairshare group
   - simplify paying other groups/certs
 */
@@ -43,16 +44,17 @@ class App extends ApplicationState {
   user(state) {  // Set the images, switch user options, and qr code.
     const {name, img} = User.get(state),
 	  picture = `images/${img}`;
-    this.redeemCertificates(state); // TODO: handle failures
+    this.redeemCertificates(state); // FIXME: rationalize this.
     userButton.querySelector('img').src = picture;
     updateQRDisplay({payee: state, currency: this.pending.currency || this.states.currency, imageURL: picture});
-    document.querySelectorAll('.mdl-menu > [data-key]').forEach(e => e.removeAttribute('disabled'));
-    document.querySelector(`.mdl-menu > [data-key="${state}"]`).setAttribute('disabled', 'disabled');
+    document.querySelectorAll('.mdl-menu > [data-key]').forEach(e => e.removeAttribute('disabled'));  // All enabled...
+    document.querySelector(`.mdl-menu > [data-key="${state}"]`).setAttribute('disabled', 'disabled'); // ... except yourself.
+    Group.list.forEach(key => updateGroupDisplay(key));
+    // Payment menus should just list groups to which we belong.
     document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="currencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="investmentPoolButton"]').innerHTML = '';
-    Group.list.forEach(key => updateGroupDisplay(key));
     for (const groupElement of groupsList.children) { // fixme: combine with update group display
       const key = groupElement.id,
 	    group = Group.get(key),
@@ -286,7 +288,6 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
 	userGroupData = group.userData(user);
   groupElement.querySelector('expanding-li .mdl-list__item-avatar').setAttribute('src', `images/${img}`);
   groupElement.querySelector('expanding-li .group-name').textContent = name;
-  console.log({key, user, userGroupData});
   if (!userGroupData) return;
   const {fee, stipend, balance, members} = userGroupData;
   updateGroupBalance(groupElement, balance);
@@ -314,7 +315,6 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
 function makeGroupDisplay(key) { // Render the data for a group and it's members.
   const groupElement = groupTemplate.content.cloneNode(true).querySelector('li');
   groupElement.setAttribute('id', key);
-  //updateGroupDisplay(key, groupElement);
   groupsList.append(groupElement);
 }
 
