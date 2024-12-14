@@ -1,7 +1,7 @@
 # FairShare Functional Straw-Person
 
-> Synopsis: A working demonstration of FairShare functionality, as a step towards an MVP. 
->           The intent is to make the _operations_ concrete. (Not the look and feel.)
+> Synopsis: A working demonstration of FairShare functionality, as a step towards an MVP. The intent is to make the _operations_ concrete. (Not the look and feel.)
+
 > Status: Available [here](app.html) with canned data, locally persistent across sessions, but without networking across devices.
 
 * auto-gen TOC:
@@ -88,9 +88,11 @@ Any of the following would be nice for an MVP, but it remains to be seen if they
   
 ## Technical Description
 
+### Design
+
 This should be evident in the code, which is organized as follows:
   
-`index.html` - The static structure, including all screens. (There is no server-side or client-side HTML generator.) However, in a nod to the _Creating New Groups and New Users_ exclusion, above, there are some HTML Template elements.
+`app.html` - The static structure, including all screens. (There is no server-side or client-side HTML generator.) However, in a nod to the _Creating New Groups and New Users_ exclusion, above, there are some HTML Template elements.
 `style.css` - There are no custom ([Web Component](https://developer.mozilla.org/en-US/docs/Web/API/Web_components)) elements (yet), but the HTML does use the [Material Design Lite](https://getmdl.io/index.html) library. The only subtlety is that the app does _not_ dynamically add and remove elements (e.g., as the user navigates to different "screens"). Instead, the inactive elements are simply "turned off" by CSS rules that make use of css classes on the Body element (which the Javascript toggles on and off as needed).
 `script.js` - Uses plain modern [ES6](https://www.geeksforgeeks.org/introduction-to-es6/) Javascript. There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step. The file makes use of two modules that are the guts of the app: `application.js` and `domain.js`.
 `spec/`- This directory holds tests for the two modules. The tests are run with [jasmine](https://jasmine.github.io/) in a command shell.
@@ -140,9 +142,9 @@ Writing code forces decisions. I've simplified things by making choices that mig
 
 ### Hosting and Source
 
-The app is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end.
+The app is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end. ([link](app.html))
 
 The source is at [github.com/howard-stearns/fairshare](https://github.com/howard-stearns/fairshare).
 
-To run the app locally (e.g., after making local changes), you need to [serve the files](https://realpython.com/python-http-server/). I.e., at http://localhost:8000 rather than file:///whatever/fairshare/index.html
+To run the app locally (e.g., after making local changes), you need to [serve the files](https://realpython.com/python-http-server/). I.e., at http://localhost:8000/app.html rather than file:///whatever/fairshare/app.html
 
