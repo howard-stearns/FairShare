@@ -1,4 +1,4 @@
-#### Functional Straw-Person
+_**<big>Functional Demo Straw-Person</big>**_
 
 > Synopsis: A working demonstration of FairShare functionality, as a step towards an MVP. The intent is to make the _operations_ concrete. (Not the look and feel.)
 
@@ -24,8 +24,9 @@ Nonetheless, it is possible to move forward. As a first step towards an MVP, we 
 
 ### Goal and Needs
 
-Get consensus (_among whom?_) on what concrete behavior is needed for an MVP app, and get started on the next steps to produce one. To that end, th functional straw-person of this project should have:
+Get consensus (_among whom?_) on what concrete behavior is needed for an MVP app, and get started on the next steps to produce one.
 
+To that end, th functional straw-person of this project should have:
 - testable behavior, in an understandable visual display on _mobile and desktop_
 - readable code, without needing a bunch of specialized knowledge
 
@@ -55,19 +56,19 @@ No one can connect to a group that they are not a member of (by design, though n
 
 Any of the following might turn out to be needed for a real MVP.
 
-The first set is surely needed, but is omitted from this functional straw-person because I'm hoping that they are not needed for just establishing the _functional_ requirements. Once such requirements and questions are resolved, I imagine that these would be the next steps. Pushing them off too long exposes some design risk.
+The first set is surely needed, but is omitted from this functional straw-person only because I want to focus on the basic monetary operations first. Once such requirements and questions are resolved, I imagine that these would be the next steps. Pushing them off too long exposes some design risk.
 
+- **Voting** - To admit or exclude a new member, or change fee and stipend. This is core to FairShare. (I just haven't had time yet. For now, these controls are disabled.)
 - **Creating New Groups and New Users** - It changes the implementation slightly when the sets of things are not wired in to the code.
 - **Networking** - Of course, all members of a group need to have a shared realtime definition of the state of that group: balances, membership, etc.
 - **Basic Security** - The basic use of cryptography to safeguard the operations.
-- **Installable app** - Things feel different, and some APIs behave differently, when installed on a home screen (e.g., as a [Progressive Web App](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) (PWA)). This facilitates notifications, app stores, etc.
+- **Installable app** - Some APIs behave differently when installed on a home screen (e.g., as a [Progressive Web App](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) (PWA)). This facilitates notifications, app stores, etc.
 
-The next group is probably needed for an MVP, but not necessarilly required for the above steps:
+The next group is needed for an MVP, but not necessarilly required for estabslishing the basic behavior:
 
 - **UX design** - A delightful and easy-to-use experience requires two things that I don't have: 1) an understanding of who will use this and what they want to accomplish, and 2) UX talent. However, even within these constraints, the current "engineer's special" UI can surely be improved.
 - **State-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperitive Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated.
 - **Funding** - Although the first group of items above can be done very cheaply, it is still non-zero. An actual release will require some resources, as will UX design.
-- **App Ecosystem Integration** - It may be worthwhile to integrate the FairShare app into someone else's appstore, SDK, or other eccosystem/platform mechanism. (E.g., as a [World App "mini-app"](https://docs.world.org/mini-apps), which also provides [grants](https://world.org/rfp).) Alternatively, it might be worthwhile to allow other apps to be built into the FairShare platform. (See also, _updates_, below.)
 - **Notifications** - An everyday/allday app like this is most convenient if it running in the background, and notifies the user when they have received payment (or other _additioaml services_ activity, see above). Given the construction as a PWA, this is easily added (although some App Ecosystems need notifications to flow though them.)
 
 Any of the following would be nice for an MVP, but it remains to be seen if they are absolutely necessary. It will likely depend on identifying a best first use-case, and the distribution mechanism for release.
@@ -79,6 +80,7 @@ Any of the following would be nice for an MVP, but it remains to be seen if they
 - **privacy policy** - By the nature of FairShare, privacy is a good built-in feature. Nonetheless, explaining so in a way that conforms to appstore and legal requirements may not be trivial.
 - **external currency in/out** - If the other assumptions here are correct, then it might not be technically difficult to use some external currency in the FairShare group's exchange pool, and implement buying and selling FairShares through venmo/paypal for dollars, or through a blockchain. The regulatory requirements, however, are probably not simple, and could effect everything about the app.
 - **localization** - Languages, writing systems, and conventions from around the world. Depending on use case, this may be higher priority.
+- **app ecosystem integration** - It may be worthwhile to integrate the FairShare app into someone else's appstore, SDK, or other eccosystem/platform mechanism. (E.g., as a [World App "mini-app"](https://docs.world.org/mini-apps), which also provides [grants](https://world.org/rfp).) Alternatively, it might be worthwhile to allow other apps to be built into the FairShare platform. (See also, _updates_, below.)
 - **updates** - A mechanism to update the group code. Note: Swap systems are often not updatable - new versions run alongside older versions.
 - **application sdk** - The core functionality is already available for testing in [NodeJS](https://nodejs.org/en) outside of a browser. This means that a company or other enterprise could create and run applications that trade within or across groups. Packaging a documented [npm](https://www.npmjs.com) package and API would make the ecosystem available, e.g., for activity between members of a [Keiretsu](https://en.wikipedia.org/wiki/Keiretsu) or consortiums, and by client apps written by others.
 - **additional services** - Other services could be facilitated through the groups:
@@ -92,10 +94,10 @@ Any of the following would be nice for an MVP, but it remains to be seen if they
 
 This should be evident in the code, which is organized as follows:
   
-`app.html` - The static structure, including all screens. (There is no server-side or client-side HTML generator.) However, in a nod to the _Creating New Groups and New Users_ exclusion, above, there are some HTML Template elements.
-`style.css` - There are no custom ([Web Component](https://developer.mozilla.org/en-US/docs/Web/API/Web_components)) elements (yet), but the HTML does use the [Material Design Lite](https://getmdl.io/index.html) library. The only subtlety is that the app does _not_ dynamically add and remove elements (e.g., as the user navigates to different "screens"). Instead, the inactive elements are simply "turned off" by CSS rules that make use of css classes on the Body element (which the Javascript toggles on and off as needed).
-`script.js` - Uses plain modern [ES6](https://www.geeksforgeeks.org/introduction-to-es6/) Javascript. There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step. The file makes use of two modules that are the guts of the app: `application.js` and `domain.js`.
-`spec/`- This directory holds tests for the two modules. The tests are run with [jasmine](https://jasmine.github.io/) in a command shell.
+- `app.html` - The static structure, including all screens. (There is no server-side or client-side HTML generator.) However, in a nod to the _Creating New Groups and New Users_ exclusion, above, there are some HTML Template elements.
+- `style.css` - There are no custom ([Web Component](https://developer.mozilla.org/en-US/docs/Web/API/Web_components)) elements (yet), but the HTML does use the [Material Design Lite](https://getmdl.io/index.html) library. The only subtlety is that the app does _not_ dynamically add and remove elements (e.g., as the user navigates to different "screens"). Instead, the inactive elements are simply "turned off" by CSS rules that make use of css classes on the Body element (which the Javascript toggles on and off as needed).
+- `script.js` - Uses plain modern [ES6](https://www.geeksforgeeks.org/introduction-to-es6/) Javascript. There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step. The file makes use of two modules that are the guts of the app: `application.js` and `domain.js`.
+- `spec/`- This directory holds tests for the two modules. The tests are run with [jasmine](https://jasmine.github.io/) in a command shell.
 
 The local application state -- e.g., what screen the user is on, their current group, who they are paying, as opposed to shared state such as balances -- is captured in the URL. 
 
