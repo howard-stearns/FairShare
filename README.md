@@ -26,7 +26,7 @@ Nonetheless, it is possible to move forward. As a first step towards an MVP, we 
 
 Get consensus (_among whom?_) on what concrete behavior is needed for an MVP app, and get started on the next steps to produce one.
 
-To that end, the functional straw-person of this project should have:
+To that end, it is desirable that the functional straw-person of this project have:
 - testable behavior, in an understandable visual display on _mobile and desktop_
 - readable code, without needing a bunch of specialized knowledge
 
@@ -49,7 +49,7 @@ To allow payment to members of other groups, I have used the [Uniswap](https://d
   
 Everything is handled in whole numbers, with costs rounded up. So with any non-zero fee, there is a minimum 1 unit cost per transaction. (A real MVP would probably use [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt). It might also want to work in "pennies" but displaying "dollars" with two places after the decimal.)
 
-No one can connect to a group that they are not a member of (by design, though not securely enforced by the current implementation). This will prevent leakage of group data or other mischief by non-members. However, it also means that there is no way for a non-member to credit, reserve, or lock another group. Since our reserve currency for exchanges is FairShare, and everyone is a member of that group, we conduct inter-group transfers by having the sender produce a credit certificate for the receiver in the FairShare group.
+No one can connect to a group that they are not a member of (by design, though not securely enforced by the current implementation). This will prevent leakage of group data or other mischief by non-members. However, it also means that there is no way for a non-member to credit, reserve, or lock another group. (For now, when FairShare currency is transferred between the FairShare group and another group's reserve, the exchange is modeled as a "certificate". See _Basic Security_ in current [Exclusions](#exclusions).)
 
 
 ### Exclusions
@@ -69,7 +69,7 @@ The next group is needed for an MVP, but not necessarily required for establishi
 - **UX design** - A delightful and easy-to-use experience requires two things that I don't have: 1) an understanding of who will use this and what they want to accomplish, and 2) UX talent. However, even within these constraints, the current "engineer's special" UI can surely be improved.
 - **State-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperative Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated.
 - **Funding** - Although the first group of items above can be done very cheaply, it is still non-zero. An actual release will require some resources, as will UX design.
-- **Notifications** - An everyday/allday app like this is most convenient if it is running in the background, and notifies the user when they have received payment (or other _additional services_ activity, see below). Given the construction as a PWA, this is easily added (although some App Ecosystems need notifications to flow through them.)
+- **Notifications** - An everyday/allday app like this is most convenient if it is running in the background, and notifies the user when they have received payment (or other _additional services_ activity, see below). Given the construction as a PWA, this is easily added (although some _App Ecosystem Integrations_ need notifications to flow through them.)
 
 Any of the following would be nice for an MVP, but it remains to be seen if they are absolutely necessary. It will likely depend on identifying a best first use-case, and the distribution mechanism for release.
 
@@ -113,8 +113,8 @@ This all happens in one atomic operation on the app's Apples group model. Notice
 
 However, operations between groups may require multiple steps. For example, Alice can pay Carol directly in Coconuts or FairShare as they are both members of both groups. But suppose Alice doesn't have enough of either, and needs to use her large holding of Apples instead. Here's how Alice uses Apples to pay Carol a specific amount (A) of FairShare:
 
-1. The app's FairShare group model determines the FairShare fee to get the cost Cf in FairShare for delivering the intended amount Af.
-2. The app's Apples group model determines the Apples/FairShare exchange rate and fee, and computes the total Apples cost (Ca) of producing Cf FairShare. .
+1. The app's FairShare group model determines the FairShare fee to get the cost Cf in FairShare for delivering the intended amount of FairShare (Af). (This is determined by FairShare group's fee.)
+2. The app's Apples group model determines the Apples/FairShare exchange rate and fee, and computes the total Apples cost (Ca) of producing Cf FairShare. (This is determined by the Apple group's exchange, acting as an [Automated Market Maker](https://en.wikipedia.org/wiki/Constant_function_market_maker).)
 3. The app's Apples group model deducts Ca from Alice's balance of Apples and adds it to its exchange's own Apples holdings.
 4. The app's Apples group model deducts Cf from its exchange's own FairShare holdings and generates a certificate for Cf FairShare.
 5. The app's FairShare model receives the certificate for Cf FairShare, takes the fee out of circulation, and adds Af to Carol's balance. (A certificate is used between steps 4 and 5 because the Groups can trust their own internal operations, but cannot trust the client or the wire messages to accurately present the number from 4 at step 5. The number is encoded in a certificate.)
