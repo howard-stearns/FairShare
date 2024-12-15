@@ -1,4 +1,4 @@
-# FairShare Functional Straw-Person
+#### Functional Straw-Person
 
 > Synopsis: A working demonstration of FairShare functionality, as a step towards an MVP. The intent is to make the _operations_ concrete. (Not the look and feel.)
 
@@ -132,9 +132,22 @@ Writing code forces decisions. I've simplified things by making choices that mig
 
 **Transaction fees** - There are several assumptions that might not be right:
 
-1. Instead of a fixed, low 0.3% fee (0.003 * amount) for exchange pools (as hardcoded into Uniswap V1), I use the intragroup transfer fee, which we expect to be much higher.
-2. The exchange pool adds the fee to the value in the pool, which is owned by the investors rather than the group as a whole. The fee is not used to reduce the amount of group coin in circulation (which is what happens for intra-group transactions, to the benefit of the group as a whole).
-3. FIXME: summarize here what fees are charged or not charged.
+General principles on fees are:
+
+- Each group has a fee (which may be zero), and calculated values costs are rounded up to increase the fee to a whole number.
+- Groups charge this whenever group coin is being credited to a member, and the difference is removed from circulation.
+- In principle, exchanges could charge whatever fees they want. However:
+  - The fee charged by the exchange is _not_ taken out of circulation, but is instead added to the pool. Thus the ratio of reserve/group coin is weakened by more than just the coin coming into the exchange and the currency going out -- it is slightly further weakened by the fee. Is this right?
+  - In this version, the fee is fixed to be the same as whatever the associated group is charging. (Thus people cannot avoid taxes by going through an exchange.) This is different from Uniswap V1, which hardcodes the fee to 0.3% (0.003 x amount).
+
+I assume that the reserve currency group's fee will be low. Is that right?
+
+For example:
+
+- A transaction from one member of a group to another requires one fee paid to the group. The amount to be delivered is increased by the fee, so that the sender pays the extra.
+- When investing in an exchange, the (low?) FairShare fee is charged on depositing it with the exchange, reducing the investment. However, the group waves the fee that it transfers from the user's balance to the exchange pool on that same user. (The group will tax it when it come out in services or profit-taking).
+- When a person uses an exchange to pay someone in FairShare, the _exchange_ charges a fee to release it's FairShare, and the _FairShare group_ charges its own (presumably low) fee as the receiver's FairShare gets credited. As with intragroup transfers, the requested credit amount is increased so that that the sender pays the two fees.
+- When an investor withdraws fom a a exchange, the pool's group and the FairShare group will each take their respective fees. The UI shows the amount removed (i.e., it does not remove extra sfrom the pool), and the UI shows that the received balances are then slightly less.
 
 **Atomicity** - In the inter-group payment case above, steps 2-4 are atomic and can be handled by one network message. However, there can be changes to fees and exchange rates between 1 and 2, and between 4 and 5. This can result in the recipient being paid slightly more or less than the intended amount. This is a much smaller time window than in Ethereum, and most variances will be absorbed in the rounding process. We do not implment minimum buy limits and maximum sell limits as in Uniswap. (And since operations are immediate, there is no need to implement block-inclusion deadlines.)
 
@@ -144,7 +157,7 @@ Writing code forces decisions. I've simplified things by making choices that mig
 
 The app is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end. ([link](app.html))
 
-The source is at [github.com/howard-stearns/fairshare](https://github.com/howard-stearns/fairshare).
+The source is at [github.com/howard-stearns/FairShare](https://github.com/howard-stearns/fairshare).
 
 To run the app locally (e.g., after making local changes), you need to [serve the files](https://realpython.com/python-http-server/). I.e., at http://localhost:8000/app.html rather than file:///whatever/fairshare/app.html
 
