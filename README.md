@@ -62,9 +62,9 @@ The first set is surely needed, but is omitted from this functional straw-person
 - **Creating New Groups and New Users** - It changes the implementation slightly when the sets of things are not wired in to the code.
 - **Networking** - Of course, all members of a group need to have a shared realtime definition of the state of that group: balances, membership, etc.
 - **Basic Security** - The basic use of cryptography to safeguard the operations.
-- **Installable app** - Some APIs behave differently when installed on a home screen (e.g., as a [Progressive Web App](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) (PWA)). This facilitates notifications, app stores, etc.
+- **Installable App** - Some APIs behave differently when installed on a home screen (e.g., as a [Progressive Web App](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) (PWA)). This facilitates notifications, app stores, etc.
 
-	The next group is needed for an MVP, but not necessarily required for establishing the basic behavior:
+The next group is needed for an MVP, but not necessarily required for establishing the basic behavior:
 
 - **UX design** - A delightful and easy-to-use experience requires two things that I don't have: 1) an understanding of who will use this and what they want to accomplish, and 2) UX talent. However, even within these constraints, the current "engineer's special" UI can surely be improved.
 - **State-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperative Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated.
@@ -84,7 +84,7 @@ Any of the following would be nice for an MVP, but it remains to be seen if they
 - **updates** - A mechanism to update the group code. Note: Swap systems are often not updatable - new versions run alongside older versions.
 - **application sdk** - The core functionality is already available for testing in [NodeJS](https://nodejs.org/en) outside of a browser. This means that a company or other enterprise could create and run applications that trade within or across groups. Packaging a documented [npm](https://www.npmjs.com) package and API would make the ecosystem available, e.g., for activity between members of a [Keiretsu](https://en.wikipedia.org/wiki/Keiretsu) or consortiums, and by client apps written by others.
 - **additional services** - Other services could be facilitated through the groups:
-  - monetary - e.g., loans and payment schedules, particularly in association with an _application sdk _for consortiums/syndicates,
+  - monetary - e.g., loans and payment schedules, particularly in association with an _application sdk_ for consortiums/syndicates,
   - non-monetary based on group trust - e.g., reputation and message attribution, and
   - mixed - e.g., marketplace.
   
