@@ -18,7 +18,7 @@ There is currently no Minimum Viable Product (MVP) defined or built. There is a 
 
 ### Opportunity
 
-A real, working app would make things clearer, either for demonstration or for actual use. But this is Complicated by not yet having a clear "killer app" or best first use-case -- UX and security design depend on who will use the app, and how it will be used.
+A real, working app would make things clearer, either for demonstration or for actual use. But this is complicated by not yet having a clear "killer app" or best first use-case -- UX and security design depend on who will use the app, and how it will be used.
 
 Nonetheless, it is possible to move forward. As a first step towards an MVP, we can build testable and demoable single-page Web app that makes an arbitrary cut of what functionality is required.
 
@@ -26,7 +26,7 @@ Nonetheless, it is possible to move forward. As a first step towards an MVP, we 
 
 Get consensus (_among whom?_) on what concrete behavior is needed for an MVP app, and get started on the next steps to produce one.
 
-To that end, th functional straw-person of this project should have:
+To that end, the functional straw-person of this project should have:
 - testable behavior, in an understandable visual display on _mobile and desktop_
 - readable code, without needing a bunch of specialized knowledge
 
@@ -69,7 +69,7 @@ The next group is needed for an MVP, but not necessarilly required for estabslis
 - **UX design** - A delightful and easy-to-use experience requires two things that I don't have: 1) an understanding of who will use this and what they want to accomplish, and 2) UX talent. However, even within these constraints, the current "engineer's special" UI can surely be improved.
 - **State-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperitive Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated.
 - **Funding** - Although the first group of items above can be done very cheaply, it is still non-zero. An actual release will require some resources, as will UX design.
-- **Notifications** - An everyday/allday app like this is most convenient if it running in the background, and notifies the user when they have received payment (or other _additioaml services_ activity, see above). Given the construction as a PWA, this is easily added (although some App Ecosystems need notifications to flow though them.)
+- **Notifications** - An everyday/allday app like this is most convenient if it is running in the background, and notifies the user when they have received payment (or other _additioaml services_ activity, see above). Given the construction as a PWA, this is easily added (although some App Ecosystems need notifications to flow though them.)
 
 Any of the following would be nice for an MVP, but it remains to be seen if they are absolutely necessary. It will likely depend on identifying a best first use-case, and the distribution mechanism for release.
 
@@ -96,7 +96,7 @@ This should be evident in the code, which is organized as follows:
   
 - `app.html` - The static structure, including all screens. (There is no server-side or client-side HTML generator.) However, in a nod to the _Creating New Groups and New Users_ exclusion, above, there are some HTML Template elements.
 - `style.css` - There are no custom ([Web Component](https://developer.mozilla.org/en-US/docs/Web/API/Web_components)) elements (yet), but the HTML does use the [Material Design Lite](https://getmdl.io/index.html) library. The only subtlety is that the app does _not_ dynamically add and remove elements (e.g., as the user navigates to different "screens"). Instead, the inactive elements are simply "turned off" by CSS rules that make use of css classes on the Body element (which the Javascript toggles on and off as needed).
-- `script.js` - Uses plain modern [ES6](https://www.geeksforgeeks.org/introduction-to-es6/) Javascript. There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step. The file makes use of two modules that are the guts of the app: `application.js` and `domain.js`.
+- `script.js` - Uses plain modern [ES6](https://www.geeksforgeeks.org/introduction-to-es6/) Javascript. The file makes use of two modules that are the guts of the app: `application.js` and `domain.js`.
 - `spec/`- This directory holds tests for the two modules. The tests are run with [jasmine](https://jasmine.github.io/) in a command shell.
 
 The local application state -- e.g., what screen the user is on, their current group, who they are paying, as opposed to shared state such as balances -- is captured in the URL. 
@@ -157,7 +157,7 @@ For example:
 
 ### Hosting and Source
 
-The app is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end. ([link](app.html))
+The app is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end. ([link](app.html)) There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step.
 
 The source is at [github.com/howard-stearns/FairShare](https://github.com/howard-stearns/fairshare).
 
