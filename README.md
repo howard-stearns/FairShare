@@ -20,7 +20,7 @@ There is currently no Minimum Viable Product (MVP) defined or built. There is a 
 
 A real, working app would make things clearer, either for demonstration or for actual use. But this is complicated by not yet having a clear "killer app" or best first use-case -- UX and security design depend on who will use the app, and how it will be used.
 
-Nonetheless, it is possible to move forward. As a first step towards an MVP, we can build a testable and demonstratable single-page Web app that makes an arbitrary cut of what functionality is required.
+Nonetheless, it is possible to move forward. As a first step towards an MVP, we can build a testable and demonstrable single-page Web app that makes an arbitrary cut of what functionality is required.
 
 ### Goal and Needs
 
@@ -123,7 +123,7 @@ Note that the FairShare group reduced the amount of FairShare in circulation by 
 
 ### Open Questions
 
-Writing code forces decisions. I've simplified things by making choices that might not be acceptable for a real app, and would effect the design of an MVP:
+Writing code forces decisions. I've simplified things by making choices that might not be acceptable for a real app, and would affect the design of an MVP:
 
 **Reserve Currency** - The straw-person uses Uniswap V1 as a model for inter-group exchanges, with the FairShare group as the reserve currency:
 
@@ -147,8 +147,8 @@ I assume that the reserve currency group's fee will be low. Is that right?
 For example:
 
 - A transaction from one member of a group to another requires one fee paid to the group. The amount to be delivered is increased by the fee, so that the sender pays the extra.
-- When investing in an exchange, the (low?) FairShare fee is charged on depositing it with the exchange, reducing the investment. However, the group waves the fee that it transfers from the user's balance to the exchange pool on that same user. (The group will tax it when it come out in services or profit-taking).
-- When a person uses an exchange to pay someone in FairShare, the _exchange_ charges a fee to release it's FairShare, and the _FairShare group_ charges its own (presumably low) fee as the receiver's FairShare gets credited. As with intra-group transfers, the requested credit amount is increased so that that the sender pays the two fees.
+- When investing in an exchange, the (low?) FairShare fee is charged on depositing it with the exchange, reducing the investment. However, the group waves the fee that it transfers from the user's balance to the exchange pool on that same user. (The group will tax it when it comes out in services or profit-taking).
+- When a person uses an exchange to pay someone in FairShare, the _exchange_ charges a fee to release its FairShare, and the _FairShare group_ charges its own (presumably low) fee as the receiver's FairShare gets credited. As with intra-group transfers, the requested credit amount is increased so that the sender pays the two fees.
 - When an investor withdraws from an exchange, the pool's group and the FairShare group will each take their respective fees. The UI shows the amount removed (i.e., it does not remove extra from the pool), and the UI shows that the received balances are then slightly less.
 
 **Atomicity** - In the inter-group payment case above, steps 2-4 are atomic and can be handled by one network message. However, there can be changes to fees and exchange rates between 1 and 2, and between 4 and 5. This can result in the recipient being paid slightly more or less than the intended amount. This is a much smaller time window than in Ethereum, and most variances will be absorbed in the rounding process. We do not implement minimum buy limits and maximum sell limits as in Uniswap. (And since operations are immediate, there is no need to implement block-inclusion deadlines.)
