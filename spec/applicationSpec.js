@@ -90,17 +90,17 @@ describe('Application', function () {
       Group.create({ name: "FairShare", fee: 2, stipend: 10, img: "fairshare.webp", people: { alice: {balance: 100}, bob: {balance: 100}, carol: {balance: 100} } });
     });
     describe('payment', function () {
-      it('does something', function () {
+      it('does smokes', function () {
 	LocalState.merge({user: 'alice', group: 'apples', currency: 'apples', payee: 'bob', amount: 10});
 	LocalState.pay(false);
       });
     });
     describe('investment', function () {
-      it('invest does something.', function () {
+      it('invest smokes.', function () {
 	LocalState.merge({user: 'alice', group: 'apples', investment: 10});
 	LocalState.invest(false);
       });
-      it('withdraw does something.', function () {
+      it('withdraw smokes.', function () {
         LocalState.merge({user: 'alice', group: 'apples', investment: -10});
 	LocalState.invest(false);
       });

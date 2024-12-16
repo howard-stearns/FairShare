@@ -83,7 +83,7 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     return Object.keys(this.directory);
   }
   constructor({fee, people = {},
-	       totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve, // In the real app, these should initially be zero.
+	       totalGroupCoinReserve = 100e3, totalReserveCurrencyReserve = totalGroupCoinReserve / 2, // In the real app, these should initially be zero.
 	       ...props}) {
     // fee here is a percent, rather than an number less than 1.
     const portions = {}, evenPortion = 1 / Object.keys(people).length;
@@ -197,8 +197,7 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     if (!userData) this.throwUnknownUser(user);
     const amountGroupCoin = roundUpToNearest(this.exchange.computeGroupCoinAmount(amountReserveCurrency));
     
-    const {cost, ...poolData} =
-	  this.exchange.invest(amountReserveCurrency, user, execute);
+    const {cost, ...poolData} = this.exchange.invest(amountReserveCurrency, user, execute);
     let {balance} = userData;
     balance -= cost;
     if (execute) userData.balance = balance;
@@ -362,7 +361,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     let portionReserveCurrencyReserve = portion * totalReserveCurrencyReserve;
 
     let amountCoin = this.computeGroupCoinAmount(amountReserveCurrency);
-    let cost = roundUpToNearest(amountReserveCurrency < 0 ? amountReserveCurrency * (1+this.fee) : amountReserveCurrency);
+    let cost = roundUpToNearest(amountReserveCurrency < 0 ? amountCoin * (1+this.fee) : amountCoin);
 
     // After computing cost on the exact amount.
     amountCoin = roundUpToNearest(amountCoin);
@@ -373,7 +372,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     this.checkReserves(amountCoin, cost, false, portionGroupCoinReserve);
 
     if (execute) {
-      this.totalGroupCoinReserve += amountReserveCurrency;
+      this.totalGroupCoinReserve += amountCoin;
       this.totalReserveCurrencyReserve += amountReserveCurrency;
       for (const key in portions) { // Adjusts everyone's portion based on fraction of totalReserveCurrencyReserve.
 	let before = portions[key] * totalReserveCurrencyReserve;
