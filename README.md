@@ -130,6 +130,9 @@ Writing code forces decisions. I've simplified things by making choices that mig
 3. As it stands, no one can hold or invest currency in a group they are not a member of. Is this too limiting?
 4. If someone leaves a group (voluntarily or otherwise), their group balance is lost (goes out of circulation) and their investment percentage is split among the other investors. Maybe it should be liquidated (with fees) to the user's reserve currency balance (FairShare)?
 
+
+**Bootstrapping** - How do members get enough currency to start doing anything? Do they wait until they have accumulated enough from daily stipends? That isn't going to be enough to fund exchange pools for a long time! Maybe either reserve currency (FairShare group) has to start with something significant? Or maybe _external currency in/out_ (see exclusions) is not optional?
+
 **Transaction fees** - There are several assumptions that might not be right:
 
 General principles on fees are:
