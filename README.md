@@ -150,9 +150,9 @@ I assume that the reserve currency group's fee will be low. Is that right?
 For example:
 
 - A transaction from one member of a group to another requires one fee paid to the group. The amount to be delivered is increased by the fee, so that the sender pays the extra.
-- When investing in an exchange, the (low?) FairShare fee is charged on depositing it with the exchange, reducing the investment. However, the group waves the fee that it transfers from the user's balance to the exchange pool on that same user. (The group will tax it when it comes out in services or profit-taking).
+- When investing in an exchange, the (low?) FairShare fee is charged on depositing it with the exchange, so the FairShare cost must be slightly higher. However, the group waves the fee that it transfers from the user's balance to the exchange pool on that same user. (The group will tax it when it comes out in services or profit-taking).
 - When a person uses an exchange to pay someone in FairShare, the _exchange_ charges a fee to release its FairShare, and the _FairShare group_ charges its own (presumably low) fee as the receiver's FairShare gets credited. As with intra-group transfers, the requested credit amount is increased so that the sender pays the two fees.
-- When an investor withdraws from an exchange, the pool's group and the FairShare group will each take their respective fees. The UI shows the amount removed (i.e., it does not remove extra from the pool), and the UI shows that the received balances are then slightly less.
+- When an investor withdraws from an exchange, the pool's group and the FairShare group will each take their respective fees. The UI shows the amount removed (i.e., it does not remove extra from the pool), and the UI shows that the credit is slightly less.
 
 **Atomicity** - In the inter-group payment case above, steps 2-4 are atomic and can be handled by one network message. However, there can be changes to fees and exchange rates between 1 and 2, and between 4 and 5. This can result in the recipient being paid slightly more or less than the intended amount. This is a much smaller time window than in Ethereum, and most variances will be absorbed in the rounding process. We do not implement minimum buy limits and maximum sell limits as in Uniswap. (And since operations are immediate, there is no need to implement block-inclusion deadlines.)
 
@@ -160,9 +160,9 @@ For example:
 
 ### Hosting and Source
 
-The app is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end. ([link](app.html)) There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step.
+The app: [howard-stearns.github.io/FairShare/app.html](https://howard-stearns.github.io/FairShare/app.html) - It is a set of static files hosted on [GitHub](https://pages.github.com), without any applications-specific back-end.  There is _no_ build, [bundle](https://rollupjs.org/), [pack](https://webpack.js.org/), or [transpiler](https://daily.dev/blog/typescript-transpiler-explained) step.
 
-The source is at [github.com/howard-stearns/FairShare](https://github.com/howard-stearns/fairshare).
+The source: [github.com/howard-stearns/FairShare](https://github.com/howard-stearns/fairshare).
 
 To run the app locally (e.g., after making local changes), you need to [serve the files](https://realpython.com/python-http-server/). I.e., at http://localhost:8000/app.html rather than file:///whatever/fairshare/app.html
 

@@ -206,14 +206,13 @@ export class Group extends SharedObject { // Represent a group with currency, ex
   withdraw(amount, user, execute) { // Remove amount of reserve currency and corresponding group investment, and report figures, issuing a
     // certificate for the reserve currency. If execute, the certificate is real and balances are adjusted.
     let {senderData, balance:toBalance} = this.checkSenderBalance(0, user); // Make sure they are a member now, before we pull from exchange.
-    const {cost, ...poolData} = this.exchange.invest(amount, user, execute);
+    const {cost:toCost, amount:toAmount, ...poolData} = this.exchange.invest(amount, user, execute);
     const certificate = this.generateCertificate(-amount, user, execute ? 'fairshare' : '');
-    const toCost = this.computeReceiveCredit(cost);
     toBalance -= toCost; // Adds the negative to increase balance.
     if (execute) {
       senderData.balance = toBalance;
     }
-    return {toCost, toBalance, certificate, ...poolData};
+    return {toCost, toAmount, toBalance, certificate, ...poolData};
   }
 
   // Internals
@@ -350,10 +349,10 @@ export class Exchange { // Implements the math of Uniswap V1.
     return totalGroupCoinReserve * amountReserveCurrency / totalReserveCurrencyReserve;
   }
   invest(amountReserveCurrency, user, execute) {
-    // Given the positive or negative amount to be added after fees,, return the group coin cost and other stats,
+    // Given the positive or negative amount to be added, return the group coin amount and cost and other stats,
     // and update the exchange if execute. Throw error if not enough reserves to withdraw.
-    // The amountReserveCurrency is exact - the group coin amount is rounded down, and cost is computed and rounded up.
-    // We add a fee to the group coin costs IFF this is a withdrawl (amount < 0).
+    // The amountReserveCurrency is exact - the group coin includes the fee (if amountReserveCurrency < 0) and is rounded
+    // away from zero.
     const {totalGroupCoinReserve, totalReserveCurrencyReserve, portions} =  this;
     const portion = portions[user] || 0;
 
@@ -361,7 +360,7 @@ export class Exchange { // Implements the math of Uniswap V1.
     let portionReserveCurrencyReserve = portion * totalReserveCurrencyReserve;
 
     let amountCoin = this.computeGroupCoinAmount(amountReserveCurrency);
-    let cost = roundUpToNearest(amountReserveCurrency < 0 ? amountCoin * (1+this.fee) : amountCoin);
+    let cost = amountReserveCurrency < 0 ? roundUpToNearest(amountCoin * (1 - this.fee)) : roundUpToNearest(amountCoin);
 
     // After computing cost on the exact amount.
     amountCoin = roundUpToNearest(amountCoin);
@@ -382,7 +381,7 @@ export class Exchange { // Implements the math of Uniswap V1.
       portions[user] = (portionReserveCurrencyReserve + amountReserveCurrency) / this.totalReserveCurrencyReserve;
 
     }
-    return {cost, totalGroupCoinReserve, totalReserveCurrencyReserve, portionGroupCoinReserve, portionReserveCurrencyReserve};
+    return {cost, amount:amountCoin, totalGroupCoinReserve, totalReserveCurrencyReserve, portionGroupCoinReserve, portionReserveCurrencyReserve};
   }
 }
 

@@ -56,17 +56,15 @@ export class ApplicationState { // The specific implementation subclasses this.
   invest(execute) { // Make a certificate for amount of FairShare, and use that and the appropriate amount of group currency to invest in the group exchange pool.
     // Update balances and such if execute.
     const {user, group, investment} = this.states;
-    const estimatedFromCost = this.asNumber(investment);
-    if (estimatedFromCost < 0) return this.withdraw(execute);
+    const fromAmount = this.asNumber(investment);
+    if (fromAmount < 0) return this.withdraw(execute);
     const from = Group.get('fairshare'); // Where the reserve currency comes from, via a cert.
     const to = Group.get(group);         // Where the exchange is, and where the group coin balance comes from.
-    const fromAmount = from.computeReceiveCredit(estimatedFromCost);
     const {amount:toAmount, cost:estimatedToCost} = to.computeInvestmentCost(fromAmount);
     const {balance:toBalance} = to.checkSenderBalance(estimatedToCost, user); // Make sure now, before we issue the cert.
     // Now issue cert and invest in exchange.    
-    let {cost:fromCost, balance:fromBalance, certificate} = from.issueFairShareCertificate(fromAmount, user, user, 'fairshare', execute);
+    const {cost:fromCost, balance:fromBalance, certificate} = from.issueFairShareCertificate(fromAmount, user, user, 'fairshare', execute);
     const {cost:toCost, balance:toBalance2, ...rest} = to.invest(certificate, execute);
-    FairShareError.assert(fromCost, estimatedFromCost, 'FairShare cost');
     FairShareError.assert(toCost, estimatedToCost, 'coin cost');
     FairShareError.assert(toBalance2, toBalance, 'balance');
     return {fromAmount, fromCost, fromBalance, toAmount, toCost, toBalance, ...rest};
@@ -82,9 +80,9 @@ export class ApplicationState { // The specific implementation subclasses this.
     let fromBalance = from.people[user].balance;
     if (execute) poolData.fromCost = -from.redeemFairShareCertificate(certificate); // certs are always positive
     else poolData.fromCost = -from.computeReceiveCredit(certificate.amount);
-    poolData.fromBalance = fromBalance - poolData.fromCost; 
+    poolData.fromBalance = fromBalance - poolData.fromCost;
 
-    return poolData;
+    return {fromAmount, ...poolData};
   }
   redeemCertificates(user = this.states.user) { // Collect from any certificates that we may have received.
     let userData = User.get(user);

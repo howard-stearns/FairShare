@@ -154,7 +154,7 @@ class App extends ApplicationState {
       portionReserve.textContent = portionReserveCurrencyReserve.toLocaleString(),
       balanceCoin.textContent = (toBalance + toCost).toLocaleString();
       balanceReserve.textContent = (fromBalance + fromCost).toLocaleString();
-      investCoin.textContent = toCost.toLocaleString();
+      investCoin.textContent = toAmount.toLocaleString();
       afterPortionReserve.textContent = (portionReserveCurrencyReserve + fromAmount).toLocaleString();
       afterPortionCoin.textContent = (portionGroupCoinReserve + toAmount).toLocaleString();
       afterCoin.textContent = toCost ? toBalance.toLocaleString() : '';
