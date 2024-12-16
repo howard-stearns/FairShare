@@ -11,7 +11,7 @@ import {ApplicationState} from './application.js';
 var {URL, URLSearchParams, localStorage, addEventListener} = window; // Defined by Javascript.
 var {componentHandler, QRCodeStyling} = window;    // Defined by Material Design Lite and qr code libraries.
 var {subtitle, groupFilter, userButton, payee, groupsList,
-     paymeCurrency, fromCurrency, currency, currencyExchanged, investmentPool, investmentCurrency, payAmount,
+     paymeCurrency, fromCurrency, currency, currencyExchanged, investmentPool, payAmount,
      poolCoin, poolReserve, portionCoin, portionReserve, balanceCoin, balanceReserve, investCoin, investReserve, afterCoin, afterReserve, investButton, afterPortionReserve, afterPortionCoin,
      fromCost, fromBefore, fromAfter, payButton, snackbar, bridgeCost, qrDisplay, paymeURL,
      errorTitle, errorMessage, errorDialog,
@@ -28,7 +28,7 @@ class App extends ApplicationState {
   }
   group(state) {
     let name = Group.get(state)?.name || 'pick one';
-    paymeCurrency.textContent = fromCurrency.textContent = investmentCurrency.textContent = investmentPool.textContent = name;
+    paymeCurrency.textContent = fromCurrency.textContent = investmentPool.textContent = name;
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
     updateQRDisplay({payee: this.pending.user || this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
     if (state) document.getElementById(state).scrollIntoView();
@@ -176,7 +176,6 @@ class App extends ApplicationState {
       const data = super.invest(execute);
       if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `${investment > 0 ? 'Invested in ' : 'Withdrawn from'} FairShare.`});
       setCosts(data);
-      console.log(data);
       if (execute) investButton.toggleAttribute('disabled', true); // Disable until they update something.
     } catch (error) {
       if (error instanceof InsufficientReserves) {
