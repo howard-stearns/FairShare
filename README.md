@@ -58,7 +58,7 @@ Any of the following might turn out to be needed for a real MVP.
 
 The first set is surely needed, but is omitted from this functional straw-person only because I want to focus on the basic monetary operations first. Once such requirements and questions are resolved, I imagine that these would be the next steps. Pushing them off too long exposes some design risk.
 
-- **Voting** - To admit or exclude a new member, or change fee and stipend. This is core to FairShare. (I just haven't had time yet. For now, these controls are disabled.)
+- **Voting and Stipend** - To admit or exclude a new member, or change fee and stipend. This is core to FairShare. (I just haven't had time yet. For now, these controls are disabled.)
 - **Creating New Groups and New Users** - It changes the implementation slightly when the sets of things are not wired in to the code.
 - **Networking** - Of course, all members of a group need to have a shared realtime definition of the state of that group: balances, membership, etc.
 - **Basic Security** - The basic use of cryptography to safeguard the operations.
@@ -76,8 +76,6 @@ Any of the following would be nice for an MVP, but it remains to be seen if they
 - **group statistics** - e.g., volume of transactions, inequality index, and balance of trade with other group’s currencies. This is omitted until we're happy with the basic operations.
 - **delegation** - giving your vote (on candidates, taxes, etc.) to someone else. (Not hard, just not necessary for the basics.)
 - **saving past transactions** - The verified transactions could be signed by the present members and stored for later review.
-- **saving pending transactions** - A submitted signed transaction could be saved until such time as multiple members are present, and then verified. 
-- **privacy policy** - By the nature of FairShare, privacy is a good built-in feature. Nonetheless, explaining so in a way that conforms to app store and legal requirements may not be trivial.
 - **external currency in/out** - If the other assumptions here are correct, then it might not be technically difficult to use some external currency in the FairShare group's exchange pool, and implement buying and selling FairShares through venmo/paypal for dollars, or through a blockchain. The regulatory requirements, however, are probably not simple, and could affect everything about the app.
 - **localization** - Languages, writing systems, and conventions from around the world. Depending on the use case, this may be a higher priority.
 - **app ecosystem integration** - It may be worthwhile to integrate the FairShare app into someone else's app store, SDK, or other ecosystem/platform mechanism. (E.g., as a [World App "mini-app"](https://docs.world.org/mini-apps), which also provides [grants](https://world.org/rfp).) Alternatively, it might be worthwhile to allow other apps to be built into the FairShare platform. (See also, _updates_, below.)

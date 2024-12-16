@@ -110,6 +110,11 @@ export class Group extends SharedObject { // Represent a group with currency, ex
       totalGroupCoinReserve, totalReserveCurrencyReserve
     };
   }
+  isMember(user, whoIsAsking = user) {
+    const {people} = this;
+    return people[whoIsAsking] && !people[whoIsAsking].isCandidate &&
+      people[user] && !people[user].isCandidate;
+  }
 
   computeTransferCost(amount) { // Apply the group fee to answer the cost for transfering amount within the group.
     return roundUpToNearest(amount * (1 + this.fee/100));

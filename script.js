@@ -1,10 +1,7 @@
 /*
   TODO:
-  - stipend
-  - vote
-  - what happens when someone does payme for a group you are not in?
+  - Fix fees and tests to match doc.
   - do something for invest/withdraw of fairshare group
-  - simplify paying other groups/certs
 */
 
 import {User as userBinding, Group as groupBinding, UnknownUser, InsufficientFunds, InsufficientReserves, NonPositive, NonWhole} from './domain.js';
@@ -55,7 +52,7 @@ class App extends ApplicationState {
     document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="currencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="investmentPoolButton"]').innerHTML = '';
-    for (const groupElement of groupsList.children) { // fixme: combine with update group display
+    for (const groupElement of groupsList.children) {
       const key = groupElement.id,
 	    group = Group.get(key),
 	    userGroupData = group?.userData(state),
@@ -72,15 +69,16 @@ class App extends ApplicationState {
 	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="investmentPoolButton"]'); // investment exchange
       }
     }
+    checkCurrency();
   }
   payee(state) { // Set the text.
     payee.textContent = User.get(state).name;
-    this.setPayment();
+    if (checkCurrency()) this.setPayment();
   }
   currency(state) { // The target group for a payment to someone else.
     const {name} = Group.get(state).name;
     currencyExchanged.textContent = currency.textContent = Group.get(state).name;
-    this.setPayment();
+    if (checkCurrency()) this.setPayment();
   }
   amount(state) {
     payAmount.value = state;
@@ -99,8 +97,11 @@ class App extends ApplicationState {
   }
     
   pay(execute) {
-    let {payee, amount, currency, group, user} = this.states;
-    amount = this.asNumber(amount);
+    const amount = this.asNumber(this.getState('amount')),
+	  payee = this.getState('payee'),
+	  currency = this.getState('currency'),
+	  user = this.getState('user'),
+	  group = this.getState('group');
     const fromGroup = Group.get(group),
 	  data = fromGroup?.userData(user);
     function setCosts(cost, balance) {
@@ -329,6 +330,28 @@ function fillCurrencyMenu(key, name, listSelector) { // Add key/name group to me
   document.querySelector(listSelector).append(currencyChoice);
 }
 
+function checkCurrency() { // Update payment currency for change of payee or currency. Answers whether current currency works.
+  // We can only pay to currencies that the user and the payee are both in.
+  // (I.e., if we are not a member then we can only pay them in FairShare and let the payee sort it out.)
+  const currency = LocalState.getState('currency'), // We don't have all three set during the merge. getState checks pending states.
+	payee = LocalState.getState('payee'),
+	user = LocalState.getState('user');
+  if (!(payee && user)) return false;
+  let ok = false;
+  for (const element of document.querySelector('[data-mdl-for="currencyButton"]').children) {
+    const key = element.dataset.key,
+	  group = Group.get(key),
+	  bothMembers = group.isMember(payee, user);
+    element.toggleAttribute('disabled', !bothMembers);
+    if (key !== currency) continue;
+    if (bothMembers) ok = true;
+    else displayError(group.isMember(user) ?
+		      `${User.get(payee).name} is not a member of ${group.name}.` :
+		      `You are not a member of ${group.name}.`);
+  }
+  return ok;
+}
+  
 
 // These onclick handlers are wired in index.html. They are exported so that index.html can reference them.
 
@@ -389,8 +412,10 @@ export function filterGroups(event) {
 function hashChange(event, {...props} = {}) { // A change to a different section.
   const section = location.hash.slice(1) || 'groups';
   if (section === 'reset') { // specal case
-    localStorage.clear();
-    location.href = location.origin + location.pathname + '?';
+    setTimeout(() => {
+      localStorage.clear();
+      location.href = location.origin + location.pathname + '?';
+    });
   }
   LocalState.merge({section, ...props}, true);
 }
