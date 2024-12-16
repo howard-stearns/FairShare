@@ -217,7 +217,7 @@ class App extends ApplicationState {
   }
   retrieve() { // Get saved state.
     let string = localStorage.getItem('localState');
-    return string ? JSON.parse(string) : {groupFilter: 'allGroups', user: 'alice'};
+    return string ? JSON.parse(string) : {user: 'alice'};
   }
   // The forward/back buttons and the browser history all work, getting you back to a local app state.
   // Of course, this does NOT undo transactions: it just gets you back to that screen, but with current shared group/user data.
@@ -314,8 +314,9 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
   for (const {key:personKey, isCandidate} of members) {
     const personElement = groupMemberTemplate.content.cloneNode(true);
     const user = User.get(personKey);
+    personElement.querySelector('row').dataset.key = personKey;
     personElement.querySelector('.membership-action-label').textContent = isCandidate ? 'endorse' : 'expel';
-    personElement.querySelector('row > span').textContent = user.name;
+    personElement.querySelector('row > span > .name').textContent = user.name;
     peopleList.append(personElement);
   }  
 }
@@ -427,8 +428,6 @@ addEventListener('popstate', event => event.state && LocalState.merge(event.stat
 addEventListener('hashchange', hashChange);
 addEventListener('load', () => {
   Group.list.forEach(makeGroupDisplay);
-  // A hack for our double-labeled switches.
-  document.querySelectorAll('.switch-label').forEach(label => label.onclick = (e) => label.nextElementSibling.click(e));
   const params = {}; // Collect any params from query parameters.
   new URL(location).searchParams.forEach((state, key) => params[key] = state);
   hashChange(null, params);

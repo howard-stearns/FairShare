@@ -78,7 +78,7 @@
     <!-- Each group member or candidate -->
     <template id="groupMemberTemplate">
       <row>
-	<span></span>
+	<span><span class="name"></span><span class="yourself"></span></span>
 	<spacer></spacer>
 	<label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
 	  <span class="membership-action-label"></span>
@@ -135,13 +135,10 @@
 	  <div class="page-content">
 	    <row>
 	      <spacer></spacer>
-	      <double-labeled-switch>
-		<span class="switch-label">mine</span>
 	      <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect">
-		<input type="checkbox" class="mdl-switch__input" checked id="groupFilter" onclick="filterGroups(event)">
-		<span class="mdl-switch__label">all</span>
+		<input type="checkbox" class="mdl-switch__input" id="groupFilter" onclick="filterGroups(event)">
+		<span class="mdl-switch__label">show all groups</span>
 	      </label>
-	      </double-labeled-switch>
 	    </row>
 	    <ul class="mdl-list" id="groupsList"></ul>
 	  </div>

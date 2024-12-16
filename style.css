@@ -44,14 +44,12 @@ body.fairshare li#fairshare group-details {
 
 /* Special stuff of ours */
 #subtitle::before { content: ": "; }
-body.alice .mdl-menu > [data-key="alice"] > .yourself::before,
-body.bob .mdl-menu > [data-key="bob"] > .yourself::before,
-body.carol .mdl-menu > [data-key="carol"] > .yourself::before {
+body.alice [data-key="alice"] .yourself::before,
+body.bob [data-key="bob"] .yourself::before,
+body.carol [data-key="carol"] .yourself::before {
     content: " (you)"
 }
 #paymeURL { word-wrap: break-word; }
-double-labeled-switch .mdl-switch { width: fit-content; }
-double-labeled-switch .switch-label { padding-right: 16px; }
 
 /* Basic sizing and spacing */
 #about .page-content,
