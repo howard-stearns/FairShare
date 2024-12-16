@@ -97,6 +97,8 @@ This should be evident in the code, which is organized as follows:
 - [`script.js`](https://github.com/howard-stearns/FairShare/blob/main/script.js) - Uses plain modern [ES6](https://www.geeksforgeeks.org/introduction-to-es6/) Javascript. The file makes use of two modules that are the guts of the app: [`application.js`](https://github.com/howard-stearns/FairShare/blob/main/application.js) and [`domain.js`](https://github.com/howard-stearns/FairShare/blob/main/domain.js).
 - [`spec/`](https://github.com/howard-stearns/FairShare/blob/main/spec)- This directory holds tests for the two core modules. The tests are run with [jasmine](https://jasmine.github.io/) in a command shell.
 
+The guts of the operations -- the stuff that would be on a server or p2p -- is domain.js. To that might be the place to start.
+
 The local application state -- e.g., what screen the user is on, their current group, who they are paying, as opposed to such _shared_ state such as balances -- is captured in the URL. 
 
 - This allows the browser's forward, back, and history buttons to work in order to get back to "where you were" (modulo balances), and to have discussions by posting URLs to show what is meant.

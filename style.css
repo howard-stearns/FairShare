@@ -102,8 +102,25 @@ expanding-li > .mdl-list__item-primary-content > button {
     margin-right: 6px;
 }
 #groups > .page-content,
-#pay > .page-content,
-#invest > .page-content {
+#pay > .page-content {
     max-width: 650px;
     margin: 0 auto;
 }
+#invest > .page-content {
+    width: fit-content;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    padding: 15px;
+    align-items: baseline;
+}
+#invest .mdl-textfield__label,
+#invest  .mdl-textfield__input  {
+    text-align: right;
+}
+#invest > .page-content > * {
+    justify-self: end;
+}
+
+

@@ -148,17 +148,17 @@ class App extends ApplicationState {
       totalGroupCoinReserve = '', totalReserveCurrencyReserve = '',
       portionGroupCoinReserve = '', portionReserveCurrencyReserve = ''
     } = {}) {
-      poolCoin.textContent = totalGroupCoinReserve;
-      poolReserve.textContent = totalReserveCurrencyReserve;
-      portionCoin.textContent = portionGroupCoinReserve;
-      portionReserve.textContent = portionReserveCurrencyReserve,
-      balanceCoin.textContent = toBalance + toCost;
-      balanceReserve.textContent = fromBalance + fromCost;
-      investCoin.textContent = toCost;
-      afterPortionReserve.textContent = portionReserveCurrencyReserve + fromAmount;
-      afterPortionCoin.textContent = portionGroupCoinReserve + toAmount;
-      afterCoin.textContent = toCost ? toBalance : '';
-      afterReserve.textContent = fromBalance;
+      poolCoin.textContent = totalGroupCoinReserve.toLocaleString();
+      poolReserve.textContent = totalReserveCurrencyReserve.toLocaleString();
+      portionCoin.textContent = portionGroupCoinReserve.toLocaleString();
+      portionReserve.textContent = portionReserveCurrencyReserve.toLocaleString(),
+      balanceCoin.textContent = (toBalance + toCost).toLocaleString();
+      balanceReserve.textContent = (fromBalance + fromCost).toLocaleString();
+      investCoin.textContent = toCost.toLocaleString();
+      afterPortionReserve.textContent = (portionReserveCurrencyReserve + fromAmount).toLocaleString();
+      afterPortionCoin.textContent = (portionGroupCoinReserve + toAmount).toLocaleString();
+      afterCoin.textContent = toCost ? toBalance.toLocaleString() : '';
+      afterReserve.textContent = fromBalance.toLocaleString();
       investButton.toggleAttribute('disabled', !toCost);
     }
     if (!group) {
