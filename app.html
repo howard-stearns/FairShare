@@ -215,29 +215,31 @@
 	<section id="invest">
 	  <div class="page-content">
 	    <row>
+	      <span></span>
+	      <span>FairShare</span>
+	      <label>
+		<span id="investmentPool"><i>pick one</i></span>
+		<button id="investmentPoolButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		  <i class="material-icons">change_circle</i>
+		</button>
+		<ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="investmentPoolButton" onclick="chooseGroup(event)">
+		</ul>
+	      </label>
+	    </row>
+	    <row>
 	      <span>pool:</span>
-	      <span>
-		<span id="poolCoin"></span>
-		<label>
-		  <span id="investmentPool"><i>pick one</i></span>
-		  <button id="investmentPoolButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
-		    <i class="material-icons">change_circle</i>
-		  </button>
-		  <ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="investmentPoolButton" onclick="chooseGroup(event)">
-		  </ul>
-		</label>
-	      </span>
-	      <span><span id="poolReserve"></span> FairShare</span>
+	      <span id="poolReserve"></span>
+	      <span id="poolCoin"></span>
 	    </row>
 	    <row>
 	      <span>your portion:</span>
-	      <span id="portionCoin"></span>
 	      <span id="portionReserve"></span>
+	      <span id="portionCoin"></span>
 	    </row>
 	    <row>
 	      <span>your balances:</span>
-	      <span id="balanceCoin"></span>
 	      <span id="balanceReserve"></span>
+	      <span id="balanceCoin"></span>
 	    </row>
 	    <hr/>
 
@@ -245,19 +247,24 @@
 	      <button id="investButton" disabled onclick="invest()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
 		Invest
 	      </button>
-	      <span>
-		<span id="investCoin"></span>
-		<span id="investmentCurrency"></span>
-	      </span>
 	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
 		<input class="mdl-textfield__input" type="text" id="investReserve" placeholder="negative to withrdraw"  onchange="updateInvestmentCosts()">
 		<label class="mdl-textfield__label" for="investReserve">FairShare</label>
 	      </div>
+	      <span>
+		<span id="investCoin"></span>
+		<span id="investmentCurrency"></span>
+	      </span>
+	    </row>
+	    <row>
+	      <span>portion after:</span>
+	      <span id="afterPortionReserve"></span>
+	      <span id="afterPortionCoin"></span>
 	    </row>
 	    <row>
 	      <span>balances after:</span>
-	      <span id="afterCoin"></span>
 	      <span id="afterReserve"></span>
+	      <span id="afterCoin"></span>
 	    </row>
 	  </div>
 	</section>

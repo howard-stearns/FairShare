@@ -12,7 +12,7 @@ var {URL, URLSearchParams, localStorage, addEventListener} = window; // Defined 
 var {componentHandler, QRCodeStyling} = window;    // Defined by Material Design Lite and qr code libraries.
 var {subtitle, groupFilter, userButton, payee, groupsList,
      paymeCurrency, fromCurrency, currency, currencyExchanged, investmentPool, investmentCurrency, payAmount,
-     poolCoin, poolReserve, portionCoin, portionReserve, balanceCoin, balanceReserve, investCoin, investReserve, afterCoin, afterReserve, investButton,
+     poolCoin, poolReserve, portionCoin, portionReserve, balanceCoin, balanceReserve, investCoin, investReserve, afterCoin, afterReserve, investButton, afterPortionReserve, afterPortionCoin,
      fromCost, fromBefore, fromAfter, payButton, snackbar, bridgeCost, qrDisplay, paymeURL,
      errorTitle, errorMessage, errorDialog,
      groupTemplate, groupMemberTemplate, paymentTemplate} = window; // Defined by index.html elements with id= attribute.
@@ -24,6 +24,7 @@ class App extends ApplicationState {
   // These are called when their key's value is changed, and are used to set things up to match the change.
   section(state) {
     subtitle.textContent = state;
+    if (state === 'invest' && this.getState('group') === 'fairshare') setTimeout(() => this.merge({group: ''}));
   }
   group(state) {
     let name = Group.get(state)?.name || 'pick one';
@@ -151,13 +152,14 @@ class App extends ApplicationState {
       poolReserve.textContent = totalReserveCurrencyReserve;
       portionCoin.textContent = portionGroupCoinReserve;
       portionReserve.textContent = portionReserveCurrencyReserve,
-      balanceCoin.textContent = fromBalance + fromCost;
-      balanceReserve.textContent = toBalance + toCost;
+      balanceCoin.textContent = toBalance + toCost;
+      balanceReserve.textContent = fromBalance + fromCost;
       investCoin.textContent = toCost;
+      afterPortionReserve.textContent = portionReserveCurrencyReserve + fromAmount;
+      afterPortionCoin.textContent = portionGroupCoinReserve + toAmount;
       afterCoin.textContent = toCost ? toBalance : '';
       afterReserve.textContent = fromBalance;
-      if (toCost) investButton.removeAttribute('disabled');
-      else investButton.setAttribute('disabled', 'disabled');
+      investButton.toggleAttribute('disabled', !toCost);
     }
     if (!group) {
       setCosts();
@@ -174,6 +176,8 @@ class App extends ApplicationState {
       const data = super.invest(execute);
       if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `${investment > 0 ? 'Invested in ' : 'Withdrawn from'} FairShare.`});
       setCosts(data);
+      console.log(data);
+      if (execute) investButton.toggleAttribute('disabled', true); // Disable until they update something.
     } catch (error) {
       if (error instanceof InsufficientReserves) {
 	const {inputAmount, outputAmount, reserve, reserveCurrency} = error;
