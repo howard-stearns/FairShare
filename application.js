@@ -47,7 +47,7 @@ export class ApplicationState { // The specific implementation subclasses this.
     amount = this.asNumber(amount);
     const fromGroup = Group.get(group);
     const toGroup = Group.get(currency);
-    if (fromGroup === toGroup) return fromGroup.send(amount, user, payee, execute);
+    if (fromGroup === toGroup) return fromGroup.send(user, {[payee]:amount}, execute);
     if (amount % 1) throw new NonWhole({amount}); // Other errors will be triggered downstream, but computeMumble will round and suppress unless we check.
     const receivingCost = toGroup.isFairShare ? toGroup.computeTransferCost(amount) : toGroup.computePurchaseCost(amount),
 	  {cost, balance} = fromGroup.issueFairShareCertificate(receivingCost, user, payee, currency, execute);

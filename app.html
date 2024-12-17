@@ -48,43 +48,60 @@
 	    </span>
 	  </expanding-li>
 	  <group-details>
-	    <row>
-	      <span class="mdl-list__item-primary-content">
-		your balance:&nbsp;<span class="balance"></span>
-	      </span>
-	    </row>
-	    <row>
-	      <span>transaction fee: <span class="fee"></span>%</span>
-	      <spacer></spacer>
+	    <group-data>
+	      <span>daily stipend:</span>
+	      <span class="stipend"></span>
 	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
 		<label class="mdl-textfield__label">your vote</label>
 		<input class="mdl-textfield__input" type="number" min="0" disabled/>
 	      </div>
-	    </row>
-	    <row>
-	      <span>daily stipend: <span class="stipend"></span> <span class="group-name"></span></span>
-	      <spacer></spacer>
+
+	      <span>transaction fee:</span>
+	      <span><span class="fee"></span>%</span>
 	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
 		<label class="mdl-textfield__label">your vote</label>
 		<input class="mdl-textfield__input" type="number" min="0" disabled/>
 	      </div>
-	    </row>
+	    </group-data>	    
 	    <div class="people">
 	    </div>
+	    <send-data>	    
+	      <spacer></spacer>
+	      <span>your balance:</span>
+	      <span class="balance"></span>
+
+	      <spacer class="payPeople"></spacer>
+	      <span class="payPeople">cost with fee:</span>
+	      <span class="cost payPeople">-12</span> 
+
+	      <button id="investButton" onclick="payPeople()" class="payPeople mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+		Pay
+	      </button>
+	      <spacer class="payPeople"></spacer>
+	      <hr class="payPeople"/>
+
+	      <spacer class="payPeople"></spacer>
+	      <span class="payPeople">balance after:</span>
+	      <span class="balanceAfter payPeople">33</span>
+	    </send-data>
 	  </group-details>
 	</div>
       </li>
     </template>
     <!-- Each group member or candidate -->
     <template id="groupMemberTemplate">
-      <row>
 	<span><span class="name"></span><span class="yourself"></span></span>
-	<spacer></spacer>
+
+	<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+	  <input class="mdl-textfield__input" type="number" min="0" onchange="updatePayPeople()">
+	  <label class="mdl-textfield__label"">pay amount</label>
+	</div>
+	
 	<label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
 	  <span class="membership-action-label"></span>
 	  <input type="checkbox" class="mdl-checkbox__input" disabled />
 	</label>
-      </row>
+
     </template>
     <!-- Filling out a currency choice menu -->
     <template id="paymentTemplate">

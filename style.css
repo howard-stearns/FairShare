@@ -1,15 +1,17 @@
 /* This is how we get stuff to appear and disappear.*/
 /* Off by default, or in certain conditions */
-section, group-details, expanding-li button.mdl-button--colored {
+section,
+send-data .payPeople,
+group-details, expanding-li button.mdl-button--colored {
     display: none;
 }
 body:not(.allGroups) #groupsList li:has(expanding-li > span > label:not(.is-checked)),
 expanding-li:has(> .mdl-list__item-secondary-action > label:not(.is-checked)) > .mdl-list__item-primary-content button,
 body:not(.payment-bridge) row.payment-bridge,
-body.apples li[id="apples"] button:not(.mdl-button--colored),
-body.bananas li[id="bananas"] button:not(.mdl-button--colored),
-body.coconuts li[id="coconuts"] button:not(.mdl-button--colored),
-body.fairshare li[id="fairshare"] button:not(.mdl-button--colored) {
+body.apples li[id="apples"] expanding-li button:not(.mdl-button--colored),
+body.bananas li[id="bananas"] expanding-li button:not(.mdl-button--colored),
+body.coconuts li[id="coconuts"] expanding-li button:not(.mdl-button--colored),
+body.fairshare li[id="fairshare"] expanding-li button:not(.mdl-button--colored) {
     display: none;
 }
 /* Make the current nav link look disabled */
@@ -20,19 +22,20 @@ body.fairshare li[id="fairshare"] button:not(.mdl-button--colored) {
     opacity: 0.5;
 }
 /* On in certain conditions */
-.groups   #groups,
-.pay      #pay,
-.invest   #invest,
-.payme    #payme,
-.addUserKey #addUserKey,
-.newUser  #newUser,
-.about    #about {
+body.payPeople .payPeople,
+body.groups   #groups,
+body.pay      #pay,
+body.invest   #invest,
+body.payme    #payme,
+body.addUserKey #addUserKey,
+body.newUser  #newUser,
+body.about    #about {
     display: block;
 }
-body.apples li[id="apples"] button.mdl-button--colored,
-body.bananas li[id="bananas"] button.mdl-button--colored,
-body.coconuts li[id="coconuts"] button.mdl-button--colored,
-body.fairshare li[id="fairshare"] button.mdl-button--colored {
+body.apples li[id="apples"] expanding-li button.mdl-button--colored,
+body.bananas li[id="bananas"] expanding-li button.mdl-button--colored,
+body.coconuts li[id="coconuts"] expanding-li button.mdl-button--colored,
+body.fairshare li[id="fairshare"] expanding-li button.mdl-button--colored {
     display: block;
 }
 body.apples li#apples group-details,
@@ -104,8 +107,14 @@ expanding-li > .mdl-list__item-primary-content > button {
     max-width: 650px;
     margin: 0 auto;
 }
+.people .mdl-checkbox,
 #invest > .page-content {
     width: fit-content;
+}
+send-data,
+group-data,
+.people,
+#invest > .page-content {
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -117,6 +126,10 @@ expanding-li > .mdl-list__item-primary-content > button {
 #invest  .mdl-textfield__input  {
     text-align: right;
 }
+send-data > hr { width: 100%; }
+group-data > * ,
+send-data > * ,
+.people > *,
 #invest > .page-content > * {
     justify-self: end;
 }

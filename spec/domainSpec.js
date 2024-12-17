@@ -229,17 +229,20 @@ describe('FairShare', function () {
 	function sendTest(execute) {
 	  const name = 'Group',
 		fee = 8,
-		amount = 10,
+		amount1 = 10,
+		amount2 = 12,
 		startA = 100,
-		startB = 2;
-	  const people = {a: {balance: startA}, b: {balance: startB}},
+		startB = 2,
+		startC = 3;
+	  const people = {a: {balance: startA}, b: {balance: startB}, c: {balance: startC}},
 		g = Group.create({name, fee, people}),
-		expectedCost = g.computeTransferCost(amount),
-		{cost, balance} = g.send(amount, 'a', 'b', execute);
-	  let balanceA = startA, balanceB = startB;
+		expectedCost = g.computeTransferCost(amount1 + amount2),
+		{cost, balance} = g.send('a', {b: amount1, c: amount2}, execute);
+	  let balanceA = startA, balanceB = startB, balanceC = startC;
 	  function checkBalances() {
-	    it('does not effect either balance.', function () {
+	    it('does not effect any balance.', function () {
 	      expect(g.people.b.balance).toBe(balanceB);
+	      expect(g.people.c.balance).toBe(balanceC);
 	      expect(g.people.a.balance).toBe(balanceA);
 	    });
 	  }
@@ -249,7 +252,8 @@ describe('FairShare', function () {
 	  });
 	  if (execute) {
 	    it('adds amount to receiver balance.', function () {
-	      expect(g.people.b.balance).toBe(startB + amount);
+	      expect(g.people.b.balance).toBe(startB + amount1);
+	      expect(g.people.c.balance).toBe(startC + amount2);
 	    });
 	    it('subtracts cost from sender balance.', function () {
 	      expect(g.people.a.balance).toBe(startA - cost);
@@ -258,30 +262,30 @@ describe('FairShare', function () {
 	    checkBalances();
 	  }
 	  describe('error conditions', function () {
-	    beforeAll(function () { balanceA = g.people.a.balance; balanceB = g.people.b.balance; });
-	    afterAll(function () { balanceA = startA; balanceB = startB; });
+	    beforeAll(function () { balanceA = g.people.a.balance; balanceB = g.people.b.balance; balanceC = g.people.c.balance;});
+	    afterAll(function () { balanceA = startA; balanceB = startB; balanceC = startC;});
 	    checkError('if sender not in group', 
-		       () => g.send(amount, 'missing', 'b', execute),
+		       () => g.send('missing', {b: amount1}, execute),
 		       () => ({name: 'UnknownUser', user: 'missing', groupName: name}),
 		       checkBalances);
 	    checkError('if receiver not in group',
-		       () => g.send(amount, 'a', 'missing', execute),
+		       () => g.send('a', {missing: amount1}, execute),
 		       () => ({name: 'UnknownUser', user: 'missing', groupName: name}),
 		       checkBalances);
 	    checkError('if sender has insufficient balance',
-		       () => g.send(startA, 'a', 'b', execute),
+		       () => g.send('a', {b: startA}, execute),
 		       () => ({name: 'InsufficientFunds', balance: startA-(execute ? expectedCost : 0), cost: g.computeTransferCost(startA), groupName: name}),
 		       checkBalances);
 	    checkError('if amount is negative.',
-		       () => g.send(-1, 'a', 'b', execute),
+		       () => g.send('a', {b: -1}, execute),
 		       () => ({name: 'NonPositive', amount: -1}),
 		       checkBalances);
 	    checkError('if amount is zero.',
-		       () => g.send(0, 'a', 'b', execute),
+		       () => g.send('a', {b: 0}, execute),
 		       () => ({name: 'NonPositive', amount: 0}),
 		       checkBalances);
 	    checkError('if amount is fractional.',
-		       () => g.send(1.2, 'a', 'b', execute),
+		       () => g.send('a', {b: 1.2}, execute),
 		       () => ({name: 'NonWhole', amount: 1.2}),
 		       checkBalances);
 	  });

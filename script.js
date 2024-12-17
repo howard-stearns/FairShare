@@ -97,6 +97,40 @@ class App extends ApplicationState {
     setTimeout(() => this.invest(false));
   }
     
+  payPeople(execute) {
+    const amounts = {},
+	  {user, group} = LocalState.states,
+	  element = document.getElementById(group),
+	  via = Group.get(group);
+    if (!via || !element) return;
+    let total = 0;
+    for (const input of element.querySelectorAll('.people input[type="number"]')) {
+      if (input.value === '0') input.value = '';
+      if (input.value) {
+	total += (amounts[input.dataset.key] = parseFloat(input.value));
+      }
+    }
+    function setCosts({cost = 0, balance} = {}, error = null) {
+      console.log({cost, balance});
+      element.querySelector('.cost').textContent = -cost;
+      element.querySelector('.balanceAfter').textContent = balance;
+      document.body.classList.toggle('payPeople', !error && cost);
+    }
+    if (!total) {
+      setCosts();
+      return;
+    }
+    try {
+      console.log({user, amounts, execute});
+      setCosts(via.send(user, amounts, execute));
+      if (!execute) return;
+      document.body.classList.toggle('payPeople', false);
+      snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${total} ${via.name} to ${Object.keys(amounts).map(key => User.get(key).name).join(', ')}.`});
+    } catch (error) {
+      setCosts(error, error);
+      this.displayError(error);
+    }
+  }
   pay(execute) {
     const amount = this.asNumber(this.getState('amount')),
 	  payee = this.getState('payee'),
@@ -231,6 +265,9 @@ class App extends ApplicationState {
       this.url.searchParams.set(key, value); // Everything else in the query parameters.
     }
   }
+  displayError(error) {
+    displayError(this.errorMessage(error));
+  }
   errorMessage(error) {
     if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
       const {inputAmount, outputAmount, outputReserve, reserveCurrency} = error;
@@ -301,22 +338,21 @@ function updateGroupDisplay(key, groupElement = document.getElementById(key)) {
   updateGroupBalance(groupElement, balance);
   groupElement.querySelector('.fee').textContent = fee;  
   groupElement.querySelector('.stipend').textContent = stipend;  
-  const feeRow = groupElement.querySelector('row:has(.fee)');
-  const feeId = key + '-fee';
-  feeRow.querySelector('input').setAttribute('id', feeId);
-  feeRow.querySelector('label').setAttribute('for', feeId);
-  const stipendRow = groupElement.querySelector('row:has(.stipend)');
-  const stipendId = key + '-stipend';
-  stipendRow.querySelector('input').setAttribute('id', stipendId);
-  stipendRow.querySelector('label').setAttribute('for', stipendId);
   const peopleList = groupElement.querySelector('.people');
   peopleList.innerHTML = '';
   for (const {key:personKey, isCandidate} of members) {
     const personElement = groupMemberTemplate.content.cloneNode(true);
     const user = User.get(personKey);
-    personElement.querySelector('row').dataset.key = personKey;
+    const buttonKey = 'pay'+ personKey;
+    const input = personElement.querySelector('input');
+    input.dataset.key = personKey;
+    input.id = buttonKey;
+    input.nextElementSibling.setAttribute('for', buttonKey);
+    componentHandler.upgradeElement(input.parentElement);
     personElement.querySelector('.membership-action-label').textContent = isCandidate ? 'endorse' : 'expel';
-    personElement.querySelector('row > span > .name').textContent = user.name;
+    const label = personElement.querySelector('.name');
+    label.textContent = user.name;
+    label.parentElement.dataset.key = personKey;
     peopleList.append(personElement);
   }  
 }
@@ -365,6 +401,9 @@ export function updatePaymentCosts() { // Update display
 export function updateInvestmentCosts() { // Update display
   LocalState.merge({investment: investReserve.value});
 }
+export function updatePayPeople() {
+  LocalState.payPeople(false);
+}
 export function pay() { // Actually pay someone (or display error)
   LocalState.pay(true);
   updateGroupDisplay(LocalState.states.group);
@@ -373,6 +412,10 @@ export function invest() { // Acutally invest or withdraw from exchange (or disp
   LocalState.invest(true);
   updateGroupDisplay(LocalState.states.group);
   updateGroupDisplay('fairshare');
+}
+export function payPeople() {
+  LocalState.payPeople(true);
+  updateGroupDisplay(LocalState.states.group);  
 }
 
 export function toggleGroup(event) { // Open accordian for group, and make that one current.

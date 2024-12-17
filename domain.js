@@ -135,20 +135,27 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     return {amount, cost: amount}; // No fee to invest here. (But reserve currency will charge for issuing a cert.)
   }
 
-  send(amount, user, payee, execute = false) {
-    if (amount <= 0) this.throwNonPositive(amount);
-    if (amount % 1) this.throwNonWhole(amount);
+  send(user, payees, execute = false) {
+    let total = 0;
+    for (const payee in payees) {
+      let amount = payees[payee];
+      if (amount <= 0) this.throwNonPositive(amount);
+      if (amount % 1) this.throwNonWhole(amount);
+      if (!this.people[payee]) this.throwUnknownUser(payee);
+      total += amount;
+    }
     // Return {cost, balance}, where balance is what would remain for current user after sending.
     // If execute, atomically subtracts cost from user balance and adds amount to payee. (cost - amount) is removed from circulation.
-    const cost = this.computeTransferCost(amount);
+    const cost = this.computeTransferCost(total);
 
-    const receiverData = this.people[payee];
-    if (!receiverData) this.throwUnknownUser(payee);
-
-    const {senderData, balance} = this.checkSenderBalance(cost, user);
+    let {senderData, balance} = this.checkSenderBalance(cost, user);
     if (execute) {
-      senderData.balance = balance;
-      receiverData.balance += amount;
+      senderData.balance = balance; // FIXME: case of paying yourself
+      for (const payee in payees) {
+	this.people[payee].balance += payees[payee];
+      }
+    } else { // If the user pays himself, the fee is charged on the total, we choose (for demonstration consistency) to insist on the total balance...
+      balance += (payees[user] || 0);  // ...but the final result must reflect any payment to oneself.
     }
     return {cost, balance};
   }
