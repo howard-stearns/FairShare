@@ -37,21 +37,39 @@ export class ApplicationState { // The specific implementation subclasses this.
   getState(key) { // Return a single current state value by key. Also checks pending!
     return this.pending?.[key] || this.states[key];
   }
+  getStates() { // Get all pending or settled
+    return Object.assign({}, this.states, this.pending);
+  }
   asNumber(string) { // state values are strings
     return parseFloat(string || '0');
   }
 
   // Operations
   pay(execute) { // Pay, either directly or through an exchange. The latter generates a cert that the payee must redeem.
-    let {user, payee, group, currency, amount} = this.states;
+    let {user, payee, group, currency, amount} = this.getStates(),
+	fromGroup = Group.get(group),   // Source of funds.
+	toGroup = Group.get(currency);  // Final payment.
     amount = this.asNumber(amount);
-    const fromGroup = Group.get(group);
-    const toGroup = Group.get(currency);
     if (fromGroup === toGroup) return fromGroup.send(user, {[payee]:amount}, execute);
     if (amount % 1) throw new NonWhole({amount}); // Other errors will be triggered downstream, but computeMumble will round and suppress unless we check.
-    const receivingCost = toGroup.isFairShare ? toGroup.computeTransferCost(amount) : toGroup.computePurchaseCost(amount),
-	  {cost, balance} = fromGroup.issueFairShareCertificate(receivingCost, user, payee, currency, execute);
-    return {cost, balance, certificateCost: receivingCost};
+    if (toGroup.isFairShare) {
+      const certificateAmount = toGroup.computeTransferCost(amount),
+	    {cost, balance, certificate} = fromGroup.issueFairShareCertificate(certificateAmount, user, payee, currency, execute),
+	    {redeemed, credit} = toGroup.redeemFairShareCertificate(certificate, execute);
+      console.log({certificateAmount, cost, balance, certificate, redeemed, credit});
+      FairShareError.assert(amount, credit, 'amount');
+      FairShareError.assert(certificateAmount, redeemed, 'certificate amount');
+      return {cost, balance, certificateAmount};
+    }
+    if (fromGroup.isFairShare) {
+      const certificateAmount = toGroup.computePurchaseCost(amount),
+	    {cost, balance, certificate} = fromGroup.issueFairShareCertificate(certificateAmount, user, payee, 'fairshare', execute),
+	    {redeemed, credit} = toGroup.redeemFairShareCertificate(certificate, execute);
+      console.log({certificateAmount, cost, balance, certificate, redeemed, credit});
+      FairShareError.assert(amount, credit, 'amount');
+      return {cost, balance, certificateAmount, redeemed};
+    }
+    throw new FairShareError({message: `Direct group to group exchange is not supported unless one is the FairShare group.`});
   }
   invest(execute) { // Make a certificate for amount of FairShare, and use that and the appropriate amount of group currency to invest in the group exchange pool.
     // Update balances and such if execute.
@@ -75,24 +93,12 @@ export class ApplicationState { // The specific implementation subclasses this.
     const to = Group.get(group);         // Where the exechange is, and where the group coin balance comes from.
     const fromAmount = this.asNumber(investment);
     const {certificate, ...poolData}  = to.withdraw(fromAmount, user, execute);
-
-    // TODO: rationalize this.
     let fromBalance = from.people[user].balance;
-    if (execute) poolData.fromCost = -from.redeemFairShareCertificate(certificate); // certs are always positive
-    else poolData.fromCost = -from.computeReceiveCredit(certificate.amount);
+    const {redeemed, credit} = from.redeemFairShareCertificate(certificate, execute); // certs are always positive
+    poolData.fromCost = -credit;
     poolData.fromBalance = fromBalance - poolData.fromCost;
 
     return {fromAmount, ...poolData};
-  }
-  redeemCertificates(user = this.states.user) { // Collect from any certificates that we may have received.
-    let userData = User.get(user);
-    if (!userData) return;
-    while (userData._pendingCerts?.length) {
-      const certificate = userData._pendingCerts[userData._pendingCerts.length - 1];
-      Group.get(certificate.currency).redeemFairShareCertificate(certificate);
-      // only if successful.
-      userData._pendingCerts.pop();
-    }
   }
 
   // Internal machinery.
