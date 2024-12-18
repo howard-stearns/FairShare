@@ -1,8 +1,12 @@
 /*
   TODO:
-  - Fix fees and tests to match doc.
-  - do something for invest/withdraw of fairshare group
+  - persist groups
 */
+
+// This file is a mess. The idea was to just use straight Javascript + CSS + HTML, without any property-tracking framework,
+// so that no specialized knowledge would be needed to see what is going on.
+// But it turns out that the UI for exposition is oriented towards "what if" scenarios, so it would have been cleaner and more robust
+// to use a dependency-tracking framework.
 
 import {User as userBinding, Group as groupBinding, UnknownUser, InsufficientFunds, InsufficientReserves, NonPositive, NonWhole} from './domain.js';
 import {ApplicationState} from './application.js';
@@ -11,7 +15,8 @@ import {ApplicationState} from './application.js';
 var {URL, URLSearchParams, localStorage, addEventListener} = window; // Defined by Javascript.
 var {componentHandler, QRCodeStyling} = window;    // Defined by Material Design Lite and qr code libraries.
 var {subtitle, groupFilter, userButton, payee, groupsList,
-     paymeCurrency, fromCurrency, currency, currencyExchanged, investmentPool, payAmount,
+     payCurrency, paySource2, payCurrency2, payCurrency3, payCost, payBalance, payFee, exchangeInput, exchangeFee,
+     paymeCurrency, currency, currencyExchanged, investmentPool, payAmount, paySource, payExchanged, rate,
      poolCoin, poolReserve, portionCoin, portionReserve, balanceCoin, balanceReserve, investCoin, investReserve, afterCoin, afterReserve, investButton, afterPortionReserve, afterPortionCoin,
      fromCost, fromBefore, fromAfter, payButton, snackbar, bridgeCost, qrDisplay, paymeURL,
      errorTitle, errorMessage, errorDialog,
@@ -28,7 +33,7 @@ class App extends ApplicationState {
   }
   group(state) {
     let name = Group.get(state)?.name || 'pick one';
-    paymeCurrency.textContent = fromCurrency.textContent = investmentPool.textContent = name;
+    paymeCurrency.textContent = paySource.textContent = paySource2.textContent = investmentPool.textContent = name;
     // Note that WE are asking OTHERS to pay us in our currently chosen group. Compare paying others in their currency.
     updateQRDisplay({payee: this.pending.user || this.states.user, currency: state, imageURL: userButton.querySelector('img').src});
     if (state) document.getElementById(state).scrollIntoView();
@@ -42,7 +47,6 @@ class App extends ApplicationState {
   user(state) {  // Set the images, switch user options, and qr code.
     const {name, img} = User.get(state),
 	  picture = `images/${img}`;
-    this.redeemCertificates(state); // FIXME: rationalize this.
     userButton.querySelector('img').src = picture;
     updateQRDisplay({payee: state, currency: this.pending.currency || this.states.currency, imageURL: picture});
     document.querySelectorAll('.mdl-menu > [data-key]').forEach(e => e.removeAttribute('disabled'));  // All enabled...
@@ -50,7 +54,7 @@ class App extends ApplicationState {
     Group.list.forEach(key => updateGroupDisplay(key));
     // Payment menus should just list groups to which we belong.
     document.querySelector('ul[data-mdl-for="paymentButton"]').innerHTML = '';
-    document.querySelector('ul[data-mdl-for="fromCurrencyButton"]').innerHTML = '';
+    document.querySelector('ul[data-mdl-for="paySourceButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="currencyButton"]').innerHTML = '';
     document.querySelector('ul[data-mdl-for="investmentPoolButton"]').innerHTML = '';
     for (const groupElement of groupsList.children) {
@@ -64,7 +68,7 @@ class App extends ApplicationState {
       if (!userGroupData) continue;
       updateGroupBalance(groupElement, userGroupData?.balance);
       fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paymentButton"]');        // payme currency
-      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="fromCurrencyButton"]');   // pay from 
+      fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="paySourceButton"]');   // pay from
       fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="currencyButton"]');       // pay to
       if (key !== 'fairshare') { // Cannot exchange from fairshare pool yet
 	fillCurrencyMenu(key, group.name, 'ul[data-mdl-for="investmentPoolButton"]'); // investment exchange
@@ -78,7 +82,8 @@ class App extends ApplicationState {
   }
   currency(state) { // The target group for a payment to someone else.
     const {name} = Group.get(state).name;
-    currencyExchanged.textContent = currency.textContent = Group.get(state).name;
+    payCurrency.textContent = payCurrency2.textContent = payCurrency3.textContent = Group.get(state).name;
+    //currencyExchanged.textContent = currency.textContent = Group.get(state).name; // fixme restore
     if (checkCurrency()) this.setPayment();
   }
   amount(state) {
@@ -111,7 +116,6 @@ class App extends ApplicationState {
       }
     }
     function setCosts({cost = 0, balance} = {}, error = null) {
-      console.log({cost, balance});
       element.querySelector('.cost').textContent = -cost;
       element.querySelector('.balanceAfter').textContent = balance;
       document.body.classList.toggle('payPeople', !error && cost);
@@ -121,7 +125,6 @@ class App extends ApplicationState {
       return;
     }
     try {
-      console.log({user, amounts, execute});
       setCosts(via.send(user, amounts, execute));
       if (!execute) return;
       document.body.classList.toggle('payPeople', false);
@@ -132,46 +135,49 @@ class App extends ApplicationState {
     }
   }
   pay(execute) {
-    const amount = this.asNumber(this.getState('amount')),
-	  payee = this.getState('payee'),
-	  currency = this.getState('currency'),
-	  user = this.getState('user'),
-	  group = this.getState('group');
-    const fromGroup = Group.get(group),
-	  data = fromGroup?.userData(user);
-    function setCosts(cost, balance) {
-      fromCost.textContent = cost;
-      fromAfter.textContent = balance;
-      fromBefore.textContent = balance + cost;
+    let {amount, payee, currency, user, group} = this.getStates();
+    amount = this.asNumber(amount);
+    function setCosts(data = {}, error = null) {
+      const {cost, balance, redeemed = 0, certificateAmount} = data;
+      console.log(data);
+      if (error || !cost) return; // fixme
+      payBalance.textContent = (payee === user && currency === group) ?  // Paying yourself within a group.
+	`${(balance + cost - amount).toLocaleString()} - ${cost.toLocaleString()} + ${amount} = ${balance.toLocaleString()}` :
+	`${(balance + cost).toLocaleString()} - ${cost.toLocaleString()} = ${balance.toLocaleString()}`;
+      payCost.textContent = cost;
+      if (certificateAmount) {
+	if (redeemed) {
+	  exchangeFee.textContent = (cost - certificateAmount).toLocaleString();
+	  exchangeInput.textContent = certificateAmount.toLocaleString();
+	  payExchanged.textContent = redeemed.toLocaleString();
+	  rate.textContent = (redeemed/certificateAmount).toFixed(2);
+	  payFee.textContent = (amount - redeemed).toLocaleString();
+	} else {
+	  exchangeFee.textContent = '';
+	  exchangeInput.textContent = '';
+	  payExchanged.textContent = certificateAmount.toLocaleString();
+	  rate.textContent = (cost/certificateAmount).toFixed(2);
+	  payFee.textContent = (amount - certificateAmount).toLocaleString();
+	}
+      } else {
+	exchangeFee.textContent = exchangeInput.textContent = payExchanged.textContent = rate.textContent = ''; // fixme. Hide
+	payFee.textContent = amount.toLocaleString();
+      }
+      // fixme disable etc.
     }
-    if (!(amount && group && currency && user && payee)) {
-      setCosts(0, data?.balance);
-      payButton.disabled = true;
-      document.body.classList.remove('payment-bridge');
+    if (!(amount && payee && currency && user && group && currency)) {
+      setCosts();
       return;
     }
     try {
-      const {cost, balance, certificateCost} = super.pay(execute);
-      const currencyName = Group.get(currency).name;
-      const payeeName = User.get(payee).name;
-      setCosts(cost, balance);
-      payButton.textContent = `Pay ${payeeName} ${amount} ${currencyName} using ${cost} ${fromGroup.name}`;
-      payButton.disabled = execute; // Arbitrary design choice: Disable it on successful actual payment.
-      bridgeCost.textContent = certificateCost;
-      document.body.classList.toggle('payment-bridge', certificateCost !== undefined);
-      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${currencyName} to ${payeeName}.`});
+      setCosts(super.pay(execute));
+      updateGroupDisplay(group);
+      if (payee === user) updateGroupDisplay(currency);
+      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${Group.get(currency).name} to ${User.get(payee).name}.`});
     } catch (error) {
-      let message = this.errorMessage(error); // Can only be localized to language here in the app.
-      if (error instanceof InsufficientReserves) { // Must be before InsufficientFunds because it is a subtype
-	const {inputAmount} = error;
-	setCosts(inputAmount, data ? data.balance- inputAmount: '');
-      } else if (error instanceof InsufficientFunds) {
-	const {cost, balance} = error;
-	setCosts(cost, balance);
-      }
-      payButton.disabled = true;
-      document.body.classList.remove('payment-bridge'); // It would be nice if we had a cost to show.
-      displayError(message, error.name);
+      console.error(error);
+      setCosts(error, error);
+      this.displayError(error);
     }
   }
   invest(execute) {
@@ -277,6 +283,7 @@ class App extends ApplicationState {
       const {cost, balance, groupName} = error;
       return `You need ${cost} ${groupName}, but you only have ${balance}.`;
     }
+    if (error instanceof UnknownUser) return `User "${User.get(error.user)?.name || error.user}" is not a member of ${error.groupName}.`;
     if (error instanceof NonPositive) return `${error.amount} is not a positive number.`;
     if (error instanceof NonWhole) return `${error.amount} is not a whole number.`;
     return error.message;

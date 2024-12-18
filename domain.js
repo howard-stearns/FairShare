@@ -149,20 +149,18 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const cost = this.computeTransferCost(total);
 
     let {senderData, balance} = this.checkSenderBalance(cost, user);
+    balance += (payees[user] || 0);  // in case we're paying ourself
     if (execute) {
-      senderData.balance = balance; // FIXME: case of paying yourself
       for (const payee in payees) {
 	this.people[payee].balance += payees[payee];
       }
-    } else { // If the user pays himself, the fee is charged on the total, we choose (for demonstration consistency) to insist on the total balance...
-      balance += (payees[user] || 0);  // ...but the final result must reflect any payment to oneself.
+      senderData.balance = balance;
     }
     return {cost, balance};
   }
   issueFairShareCertificate(amount, user, payee, currency, execute = false) {
-    // Return {cost, balance), where balance is what would remain for current user after sending.
-    // If execute, atomically subtracts cost from member balance and adds a cert for FairShares to payee.
-    // (The cert will be redeemed by the user.)
+    // Return {cost, balance, certificate), where balance is what would remain for current user after sending.
+    // If execute, atomically subtracts cost from member balance and issues a cert that actually transfers (instead of merely accounting).
     if (amount <= 0) this.throwNonPositive(amount);
     if (amount % 1) this.throwNonWhole(amount);
     const fromFairShare = this.isFairShare;
@@ -185,17 +183,16 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const certificate = this.generateCertificate(amount, payee); // Not valid for payment (no number), but conveys information.
     return {cost, balance, certificate};
   }
-  redeemFairShareCertificate(cert) { // Redeem cert, adding to balance (and reserves if appropriate). Error if bogus (including reused cert).
+  redeemFairShareCertificate(cert, execute = false) { // Redeem cert, adding to balance (and reserves if execute). Error if bogus (including reused cert).
     const {payee} = cert;
     const user = User.get(payee);
     const payeeData = this.people[payee];
     if (!payeeData || !user) this.throwUnknownUser(payee);
     const amount = user.consumeCertificate(cert);
-    const groupCoinCredit = this.isFairShare ?
-	  this.computeReceiveCredit(amount) :
-	  this.exchange.sellReserveCurrency(amount);
-    payeeData.balance += groupCoinCredit;
-    return groupCoinCredit;
+    const redeemed = this.isFairShare ? amount : this.exchange.sellReserveCurrency(amount);
+    const credit = this.computeReceiveCredit(redeemed);
+    if (execute) payeeData.balance += credit;
+    return {redeemed, credit};
   }
   invest(certificate, execute) { // Add certified amount of reserve currency to exchange, along with a corresponding amount of group curreny.
     // user is specified in cert. If execute, subtract cost from user's balance, and update all exchange stats.

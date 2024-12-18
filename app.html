@@ -94,7 +94,8 @@
 
 	<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
 	  <input class="mdl-textfield__input" type="number" min="0" onchange="updatePayPeople()">
-	  <label class="mdl-textfield__label"">pay amount</label>
+	  <label class="mdl-textfield__label">pay amount</label>
+	  <span class="mdl-textfield__error">needs positive whole number</span>
 	</div>
 	
 	<label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
@@ -163,66 +164,65 @@
 
 	<section id="pay">
 	  <div class="page-content">
-	    <row>
-	      <label>pay: <span id="payee">pick one</span>
-		<button id="payeeButton" class="mdl-button mdl-js-button  mdl-button--icon mdl-button--colored">
-		  <i class="material-icons">change_circle</i>
-		</button>
-		<ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee(event)">
-		  <!-- FIXME dynamic fill -->
-		  <li class="mdl-menu__item" data-key="alice">Alice<span class="yourself"></span></li>
-		  <li class="mdl-menu__item" data-key="bob">Bob<span class="yourself"></span></li>
-		  <li class="mdl-menu__item" data-key="carol">Carol<span class="yourself"></span></li>
-		</ul>
-	      </label>
-	      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-		<input class="mdl-textfield__input" type="number" min="0" id="payAmount" value="0" onchange="updatePaymentCosts()"/>
-		<label class="mdl-textfield__label" for="payAmount">amount</label>
-		<span class="mdl-textfield__error">needs positive whole number</span>
-	      </div>
-	      <label>
-		<span id="currency"><i>pick one</i></span>
-		<button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
-		  <i class="material-icons">change_circle</i>
-		</button>
-		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency(event)">
-		</ul>
-	      </label>
-	    </row>
-	    <row class="payment-bridge">
-	      <spacer></spacer>
-	      via
-	      <spacer></spacer>
-	    </row>
-	    <row class="payment-bridge">
-	      <label>cost <span id="bridgeCost">0.00</span></label>
-	      FairShare in <span id="currencyExchanged"></span> exchange
-	    </row>
-	    <row>
-	      <spacer></spacer>
-	      paid with your
-	      <spacer></spacer>
-	    </row>
-	    <row>
-	      <label>cost <span id="fromCost">0.00</span></label>
-	      <label>balance before <span id="fromBefore">0.00</span></label>
-	      <label>balance after <span id="fromAfter">0.00</span></label>
-	      <label>
-		<span id="fromCurrency"><i>pick one</i></span>
-		<button id="fromCurrencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
-		  <i class="material-icons">change_circle</i>
-		</button>
-		<ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="fromCurrencyButton" onclick="chooseGroup(event)">
-		</ul>
-	      </label>
-	    </row>
-	    <row>
-	      <spacer></spacer>
-	      <button id="payButton" onclick="pay()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
-		Pay
+	    <span id="payCost" class="right-justify">0</span>
+	    <span><span id="paySource2"></span> cost</span>
+	    <span>(balance  <span id="payBalance">0</span>)</span>
+
+	    <span id="exchangeFee" class="right-justify">0</span>
+	    <span>exchange fee</span>
+	    <spacer></spacer>
+
+	    <hr/> <spacer></spacer><spacer></spacer>
+	    <span id="exchangeInput" class="right-justify">0</span>
+	    <span>to exchange</span>
+	    <spacer></spacer>
+	    
+
+	    <hr/> <span>Exchanged for</span><spacer></spacer>
+	    <span id="payExchanged" class="right-justify">0</span>
+	    <span id="payCurrency3">FairShare</span>
+	    <span>(effective rate <span id="rate"></span>:1)</span>
+
+	    <span id="payFee" class="right-justify">0</span>
+	    <span><span id="payCurrency2"></span> fee</span>
+	    <spacer></spacer>
+
+	    <hr/>
+	    <button id="payButton" onclick="pay()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+	      Pay
+	    </button>
+	    <label>
+	      from <span id="paySource"><i>source of funds</i></span>
+	      <button id="paySourceButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
 	      </button>
-	      <spacer></spacer>
-	    </row>
+	      <ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="paySourceButton" onclick="chooseGroup(event)">
+	      </ul>
+	    </label>
+	    
+	    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label right-justify">
+	      <input class="mdl-textfield__input" type="number" min="0" id="payAmount" value="0" onchange="updatePaymentCosts()"/>
+	      <label class="mdl-textfield__label" for="payAmount">amount</label>
+	      <span class="mdl-textfield__error">needs positive whole number</span>
+	    </div>
+	    <label>
+	      <span id="payCurrency"><i>choose payment currency</i></span>
+	      <button id="currencyButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
+	      </button>
+	      <ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="currencyButton" onclick="chooseCurrency(event)">
+	      </ul>
+	    </label>
+	    <label>to <span id="payee"><i>choose payee</i></span>
+	      <button id="payeeButton" class="mdl-button mdl-js-button mdl-button--icon mdl-button--colored">
+		<i class="material-icons">change_circle</i>
+	      </button>
+	      <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" data-mdl-for="payeeButton" onclick="choosePayee(event)">
+		<li class="mdl-menu__item" data-key="alice">Alice<span class="yourself"></span></li>
+		<li class="mdl-menu__item" data-key="bob">Bob<span class="yourself"></span></li>
+		<li class="mdl-menu__item" data-key="carol">Carol<span class="yourself"></span></li>
+	      </ul>
+	    </label>
 	  </div>
 	</section>
 

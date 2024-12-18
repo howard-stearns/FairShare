@@ -114,6 +114,7 @@ expanding-li > .mdl-list__item-primary-content > button {
 send-data,
 group-data,
 .people,
+#pay > .page-content,
 #invest > .page-content {
     margin: 0 auto;
     display: grid;
@@ -129,7 +130,8 @@ group-data,
 send-data > hr { width: 100%; }
 group-data > * ,
 send-data > * ,
-.people > *,
+.people > * ,
+#pay > .page-content > .right-justify,
 #invest > .page-content > * {
     justify-self: end;
 }
