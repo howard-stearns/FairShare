@@ -185,7 +185,7 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const payeeData = this.people[payee];
     if (!payeeData || !user) this.throwUnknownUser(payee);
     const amount = user.consumeCertificate(cert);
-    const redeemed = this.isFairShare ? amount : this.exchange.sellReserveCurrency(amount);
+    const redeemed = this.isFairShare ? amount : this.exchange.sellReserveCurrency(amount, execute);
     // The use of max here is a hack. Need to think about where we do rounding in relation to taking fees.
     const credit = Math.max(1, this.computeReceiveCredit(redeemed));
     if (execute) payeeData.balance += credit;
@@ -223,7 +223,6 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     return this.name === 'FairShare';
   }
   generateCertificate(amount, payee, currency = '') { // Does not add fee. If you leave off currency, it will be a fake/informational "certificate".
-    if (!currency) return {amount, payee};
     if (amount <= 0) this.throwNonPositive(amount);
     const receiverData = User.get(payee);
     const number = receiverData.nextCertificateNumber;
@@ -307,14 +306,16 @@ export class Exchange { // Implements the math of Uniswap V1.
     this.reportTransaction({label: 'sellGroupCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
     return outputAmount;
   }
-  sellReserveCurrency(amount) { // One can also sell the common trading coin (reserve currency) to the exchange.
+  sellReserveCurrency(amount, execute = true) { // One can also sell the common trading coin (reserve currency) to the exchange.
     const inputAmount = amount;
     const inputReserve = this.totalReserveCurrencyReserve;
     const outputReserve = this.totalGroupCoinReserve;
     const outputAmount = this.computeSellAmount(inputAmount, inputReserve, outputReserve);
     this.checkReserves(inputAmount, outputAmount, false);
-    this.totalGroupCoinReserve -= outputAmount;
-    this.totalReserveCurrencyReserve += inputAmount;
+    if (execute) {
+      this.totalGroupCoinReserve -= outputAmount;
+      this.totalReserveCurrencyReserve += inputAmount;
+    }
     this.reportTransaction({label: 'sellPricingCoin', inputAmount, outputAmount, inputReserve, outputReserve});    
     return outputAmount;
   }

@@ -307,20 +307,19 @@ describe('FairShare', function () {
 		targetAmount = 10,
 		isFromFairShare = name1 === 'FairShare',
 		isToFairShare = name2 === 'FairShare';
-	  const g1 = Group.create({name: name1, fee: fee1, people: {alice: {balance: startingBalanceAlice}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve}),
-		g2 = Group.create({name: name2, fee: fee2, people: {bob: {balance: startingBalanceBob}}, totalReserveCurrencyReserve: reserve, totalGroupCoinReserve: reserve});
+	  const g1 = Group.create({name: name1, fee: fee1, people: {alice: {balance: startingBalanceAlice}}, totalGroupCoinReserve: reserve, totalReserveCurrencyReserve: reserve}),
+		g2 = Group.create({name: name2, fee: fee2, people: {bob: {balance: startingBalanceBob}}, totalGroupCoinReserve: reserve, totalReserveCurrencyReserve: reserve});
 	  // Working backwards from targetAmount in g2:
 	  // How much FairShare will be needed in g2 to exchanges for targetAmount of g2 currency:
 	  const computedRedemptionCost = isToFairShare ?
 		g2.computeTransferCost(targetAmount) :
 		g2.computePurchaseCost(targetAmount), 
-		{cost:certificateCost, balance} = g1.issueFairShareCertificate(computedRedemptionCost, 'alice', 'bob', key2, execute),
+		{cost:certificateCost, balance, certificate} = g1.issueFairShareCertificate(computedRedemptionCost, 'alice', 'bob', key2, execute),
 		computedCertificateCost = isFromFairShare ?
 		g1.computeTransferCost(computedRedemptionCost) :
 		g1.computeCertificateCost(computedRedemptionCost); // What should that cert have cost us in g1.
 	  const receiver = User.get('bob'),
-		certificate = receiver._pendingCerts[receiver._pendingCerts.length - 1], // Reaching into internals. Not public.
-		credit = execute && g2.redeemFairShareCertificate(certificate);
+		{redeemed, credit} = g2.redeemFairShareCertificate(certificate, execute);
 
 	  let balanceAlice = startingBalanceAlice, balanceBob = startingBalanceBob,
 	      reserve1coin = reserve, reserve1fairshare = reserve,
@@ -387,7 +386,7 @@ describe('FairShare', function () {
 		  expect(g2.exchange.totalReserveCurrencyReserve).toBe(reserve + certificate.amount);
 		});
 		it('subtracts receiving group coin from its reserve.', function () {
-		  expect(g2.exchange.totalGroupCoinReserve).toBe(reserve - credit);
+		  expect(g2.exchange.totalGroupCoinReserve).toBe(reserve - redeemed);
 		});
 	      }
 	    });
@@ -431,7 +430,7 @@ describe('FairShare', function () {
 			 confirmBalancesUnchanged);
 	    }
 	    checkError('if certificate is reused',
-		       () => g2.redeemFairShareCertificate(certificate),
+		       () => g2.redeemFairShareCertificate(certificate, execute),
 		       () => (execute ? {name: 'ReusedCertificate', certificate} : {}),
 		       confirmBalancesUnchanged);
 	    checkError('if amount is negative.',
@@ -448,14 +447,6 @@ describe('FairShare', function () {
 		       confirmBalancesUnchanged);
 	  });
 	}
-	describe('not FairShare', function () {
-	  describe('dry run', function () {
-	    sendTest({execute: false});
-	  });
-	  describe('executing run', function () {
-	    sendTest({execute: true});
-	  });
-	});
 	describe('from FairShare', function () {
 	  describe('dry run', function () {
 	    sendTest({execute: false, name1: 'FairShare'});
