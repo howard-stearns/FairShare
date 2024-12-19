@@ -139,15 +139,13 @@ class App extends ApplicationState {
     amount = this.asNumber(amount);
     function setCosts(data = {}, error = null) {
       const {cost, balance, redeemed = 0, certificateAmount} = data;
-      console.log(data);
-      if (error || !cost) return; // fixme
-      payBalance.textContent = (payee === user && currency === group) ?  // Paying yourself within a group.
-	`${(balance + cost - amount).toLocaleString()} - ${cost.toLocaleString()} + ${amount} = ${balance.toLocaleString()}` :
-	`${(balance + cost).toLocaleString()} - ${cost.toLocaleString()} = ${balance.toLocaleString()}`;
+      console.log({amount, data, error});
+      document.body.classList.toggle('redeemed', !!redeemed);
+      document.body.classList.toggle('exchanged', !!certificateAmount);
       payCost.textContent = cost;
       if (certificateAmount) {
 	if (redeemed) {
-	  exchangeFee.textContent = (cost - certificateAmount).toLocaleString();
+	  exchangeFee.textContent = (certificateAmount - cost).toLocaleString();
 	  exchangeInput.textContent = certificateAmount.toLocaleString();
 	  payExchanged.textContent = redeemed.toLocaleString();
 	  rate.textContent = (redeemed/certificateAmount).toFixed(2);
@@ -163,7 +161,11 @@ class App extends ApplicationState {
 	exchangeFee.textContent = exchangeInput.textContent = payExchanged.textContent = rate.textContent = ''; // fixme. Hide
 	payFee.textContent = amount.toLocaleString();
       }
-      // fixme disable etc.
+      payButton.toggleAttribute('disabled', !amount || error);
+      if (!cost) return;
+      payBalance.textContent = (payee === user && currency === group) ?  // Paying yourself within a group.
+	`${(balance + cost - amount).toLocaleString()} - ${cost.toLocaleString()} + ${amount} = ${balance.toLocaleString()}` :
+	`${(balance + cost).toLocaleString()} - ${cost.toLocaleString()} = ${balance.toLocaleString()}`;
     }
     if (!(amount && payee && currency && user && group && currency)) {
       setCosts();
@@ -176,8 +178,10 @@ class App extends ApplicationState {
       if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${Group.get(currency).name} to ${User.get(payee).name}.`});
     } catch (error) {
       console.error(error);
-      setCosts(error, error);
       this.displayError(error);
+      let {cost, balance} = error;
+      error.balance -= cost;
+      setCosts(error, error);
     }
   }
   invest(execute) {

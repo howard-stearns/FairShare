@@ -66,7 +66,7 @@ export class ApplicationState { // The specific implementation subclasses this.
 	    {cost, balance, certificate} = fromGroup.issueFairShareCertificate(certificateAmount, user, payee, 'fairshare', execute),
 	    {redeemed, credit} = toGroup.redeemFairShareCertificate(certificate, execute);
       console.log({certificateAmount, cost, balance, certificate, redeemed, credit});
-      FairShareError.assert(amount, credit, 'amount');
+      FairShareError.assert(credit, amount, 'amount');
       return {cost, balance, certificateAmount, redeemed};
     }
     throw new FairShareError({message: `Direct group to group exchange is not supported unless one is the FairShare group.`});

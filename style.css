@@ -2,6 +2,10 @@
 /* Off by default, or in certain conditions */
 section,
 send-data .payPeople,
+span.redeemed,
+span.exchanged,
+hr.redeemed,
+hr.exchanged,
 group-details, expanding-li button.mdl-button--colored {
     display: none;
 }
@@ -42,6 +46,12 @@ body.apples li#apples group-details,
 body.bananas li#bananas group-details,
 body.coconuts li#coconuts group-details,
 body.fairshare li#fairshare group-details {
+    display: block;
+}
+body.redeemed span.redeemed,
+body.exchanged span.exchanged,
+body.redeemed hr.redeemed,
+body.exchanged hr.exchanged{    
     display: block;
 }
 

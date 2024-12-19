@@ -59,15 +59,11 @@ export class User extends SharedObject { // Represent a User (globally, not spec
   static directory = {}; // Distinct from other SharedObjects.
   constructor(properties) {
     super(properties);
-    this._pendingCerts = [];
     this._certIssues = 0;
     this._certsRedeemed = -1;
   }
   get nextCertificateNumber() {
     return this._certIssues++;
-  }
-  receiveCertificate(certificate) {
-    this._pendingCerts.push(certificate);
   }
   consumeCertificate(certificate) {
     const {amount, number} = certificate;
@@ -190,7 +186,8 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     if (!payeeData || !user) this.throwUnknownUser(payee);
     const amount = user.consumeCertificate(cert);
     const redeemed = this.isFairShare ? amount : this.exchange.sellReserveCurrency(amount);
-    const credit = this.computeReceiveCredit(redeemed);
+    // The use of max here is a hack. Need to think about where we do rounding in relation to taking fees.
+    const credit = Math.max(1, this.computeReceiveCredit(redeemed));
     if (execute) payeeData.balance += credit;
     return {redeemed, credit};
   }
@@ -231,7 +228,6 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     const receiverData = User.get(payee);
     const number = receiverData.nextCertificateNumber;
     const certificate = {payee, amount, currency, number};
-    receiverData.receiveCertificate(certificate); // Currency is advisory. See redeem...
     return certificate;
   }
   checkSenderBalance(cost, user) { // Return user's data and balance after subtracting cost, and throwing if insufficient or missing.

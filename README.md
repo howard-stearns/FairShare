@@ -28,7 +28,7 @@ Get consensus (_among whom?_) on what concrete behavior is needed for an MVP app
 
 To that end, it is desirable that the functional straw-person of this project have:
 - testable behavior, in an understandable visual display on _mobile and desktop_
-- readable code, without needing a bunch of specialized knowledge
+- ~readable code, without needing a bunch of specialized knowledge~  (_That was the intent. But it turns out that the exposition of the various fees involves so much "what if", that I wish I had used a dependency-tracking framework from the beginning. As is, the code is neither simple nor robust._)
 
 ## High Level Description
 
