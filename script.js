@@ -304,7 +304,7 @@ function updateQRDisplay({payee, currency, imageURL}) { // Update payme qr code 
   if (currency) params.set('currency', currency); // But now always a specified currency.
   const query = params.toString();
   const url = new URL('?' + query, location.href); // URLSearchParams.toString() does not include the '?'
-  url.hash = 'payme';
+  url.hash = 'pay';
   const qrCode = new QRCodeStyling({
     width: 300,
     height: 300,
