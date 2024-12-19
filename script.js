@@ -139,7 +139,6 @@ class App extends ApplicationState {
     amount = this.asNumber(amount);
     function setCosts(data = {}, error = null) {
       const {cost, balance, redeemed = 0, certificateAmount} = data;
-      console.log({amount, data, error});
       document.body.classList.toggle('redeemed', !!redeemed);
       document.body.classList.toggle('exchanged', !!certificateAmount);
       payCost.textContent = cost;
@@ -162,7 +161,10 @@ class App extends ApplicationState {
 	payFee.textContent = amount.toLocaleString();
       }
       payButton.toggleAttribute('disabled', !amount || error);
-      if (!cost) return;
+      if (!cost) {
+	payBalance.textContent = '';
+	return;
+      }
       payBalance.textContent = (payee === user && currency === group) ?  // Paying yourself within a group.
 	`${(balance + cost - amount).toLocaleString()} - ${cost.toLocaleString()} + ${amount} = ${balance.toLocaleString()}` :
 	`${(balance + cost).toLocaleString()} - ${cost.toLocaleString()} = ${balance.toLocaleString()}`;
@@ -175,9 +177,10 @@ class App extends ApplicationState {
       setCosts(super.pay(execute));
       updateGroupDisplay(group);
       if (payee === user) updateGroupDisplay(currency);
-      if (execute) snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${Group.get(currency).name} to ${User.get(payee).name}.`});
+      if (!execute) return;
+      snackbar.MaterialSnackbar.showSnackbar({message: `Paid ${amount} ${Group.get(currency).name} to ${User.get(payee).name}.`});
+      this.merge({amount: 0});
     } catch (error) {
-      console.error(error);
       this.displayError(error);
       let {cost, balance} = error;
       error.balance -= cost;
