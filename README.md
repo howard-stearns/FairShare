@@ -28,7 +28,7 @@ Get consensus (_among whom?_) on what concrete behavior is needed for an MVP app
 
 To that end, it is desirable that the functional straw-person of this project have:
 - testable behavior, in an understandable visual display on _mobile and desktop_
-- ~readable code, without needing a bunch of specialized knowledge~  (_That was the intent. But it turns out that the exposition of the various fees involves so much "what if", that I wish I had used a dependency-tracking framework from the beginning. As is, the code is neither simple nor robust._)
+- ~~readable code, without needing a bunch of specialized knowledge~~  (_That was the intent. But it turns out that the exposition of the various fees involves so much "what if", that I wish I had used a dependency-tracking framework from the beginning. As is, the code is neither simple nor robust._)
 
 ## High Level Description
 
@@ -37,9 +37,9 @@ To that end, it is desirable that the functional straw-person of this project ha
 For this first project I have built a limited, working, single-page Web app. There is no networking or security - just the behaviors acting locally, and locally persisting the data for all users and groups from session to session. It does not coordinate or synchronize between computers. Nonetheless, the behavior is concrete, with specific design decisions described below.
  
 A person can switch between three existing users named "Alice", "Bob", and "Carol". The users are distributed among three existing groups:
-- The "Apples" group has members Alice and Bob.
-- The "Bananas" group has members Bob and Carol.
-- The "Coconuts" group has members Carol and Alice.
+- The "Apples" group has members Alice and Carol.
+- The "Bananas" group has members Bob and Alice.
+- The "Coconuts" group has members Carol and Bob.
 
 To allow payment to members of other groups, I have used the [Uniswap](https://docs.uniswap.org/concepts/overview) model:
 - In Uniswap [V1](https://docs.uniswap.org/contracts/v1/overview), there is one exchange per group, which has a pool of the group's coin, as well as a pool of a reserve currency common to all exchanges. The various existing versions of Uniswap run on the [Ethereum](https://ethereum.org/en/) blockchain network, in which Ether (ETH) is the universally available reserve currency. Later versions of Uniswap offer more complex variations.
@@ -56,9 +56,9 @@ No one can connect to a group that they are not a member of (by design, though n
 
 Any of the following might turn out to be needed for a real MVP.
 
-The first set is surely needed, but is omitted from this functional straw-person only because I want to focus on the basic monetary operations first. Once such requirements and questions are resolved, I imagine that these would be the next steps. Pushing them off too long exposes some design risk.
+The first set is surely needed, but is omitted from this functional straw-person only because I want to focus on the basic monetary operations first. Once such requirements and [questions](#open-questions) are resolved, I imagine that these would be the next steps. Pushing them off too long exposes some design risk.
 
-- **Voting and Stipend** - To admit or exclude a new member, or change fee and stipend. This is core to FairShare. (I just haven't had time yet. For now, these controls are disabled.)
+- **Voting and Stipend** - Stipends are not paid and there is is no voting to admit or exclude a new member, or change fee and stipend. These are core to FairShare. (I just haven't had time yet. For now, these controls are disabled.)
 - **Creating New Groups and New Users** - It changes the implementation slightly when the sets of things are not wired in to the code.
 - **Networking** - Of course, all members of a group need to have a shared realtime definition of the state of that group: balances, membership, etc.
 - **Basic Security** - The basic use of cryptography to safeguard the operations.
@@ -67,14 +67,14 @@ The first set is surely needed, but is omitted from this functional straw-person
 The next group is needed for an MVP, but not necessarily required for establishing the basic behavior:
 
 - **UX design** - A delightful and easy-to-use experience requires two things that I don't have: 1) an understanding of who will use this and what they want to accomplish, and 2) UX talent. However, even within these constraints, the current "engineer's special" UI can surely be improved.
-- **State-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperative Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated.
-- **Funding** - Although the first group of items above can be done very cheaply, it is still non-zero. An actual release will require some resources, as will UX design.
+- **State-tracking UI framework** - It's too early to pick a UI framework, _and_ I specifically want people to understand the current code without needing to first learn some specialist system. Thus everything is done in straight-up HTML + CSS + imperative Javascript. It would be more robust, and possibly less code, to use a system that tracked changes to ApplicationState and automatically updated all/only those parts of the UI that need to be updated. (_I should have done this from the start._)
+- **Funding** - An actual release will require some resources, as will UX design.
 - **Notifications** - An everyday/allday app like this is most convenient if it is running in the background, and notifies the user when they have received payment (or other _additional services_ activity, see below). Given the construction as a PWA, this is easily added (although some _App Ecosystem Integrations_ need notifications to flow through them.)
 
 Any of the following would be nice for an MVP, but it remains to be seen if they are absolutely necessary. It will likely depend on identifying a best first use-case, and the distribution mechanism for release.
 
 - **group statistics** - e.g., volume of transactions, inequality index, and balance of trade with other group’s currencies. This is omitted until we're happy with the basic operations.
-- **delegation** - giving your vote (on candidates, taxes, etc.) to someone else. (Not hard, just not necessary for the basics.)
+- **delegation** - giving your vote (on candidates, taxes, etc.) to someone else. (Not terribly hard, just not necessary for the basics.)
 - **saving past transactions** - The verified transactions could be signed by the present members and stored for later review.
 - **external currency in/out** - If the other assumptions here are correct, then it might not be technically difficult to use some external currency in the FairShare group's exchange pool, and implement buying and selling FairShares through venmo/paypal for dollars, or through a blockchain. The regulatory requirements, however, are probably not simple, and could affect everything about the app.
 - **localization** - Languages, writing systems, and conventions from around the world. Depending on the use case, this may be a higher priority.
@@ -104,20 +104,20 @@ The local application state -- e.g., what screen the user is on, their current g
 - This allows the browser's forward, back, and history buttons to work in order to get back to "where you were" (modulo balances), and to have discussions by posting URLs to show what is meant.
 - It allows things like payee and desired payment currency to be expressed in a URL and QR code. (The "Pay-me code" option in the user menu generates a code that can be read by another phone to get the app and open it to the right screen and some of the data.)
 
-In general, operations within a group are handled atomically by the Group model. E.g, For Alice to Bob in Apples, where both are members of the Apples group:
+In general, operations within a group are handled atomically by the Group model. E.g, For Alice to Carol in Apples, where both are members of the Apples group:
 
-1. The app's Apples group model determines the cost (Ca) to give Bob an amount of Apples (Aa).
-2. The app's Apples group model deducts Ca from Alice's Apples balance, and adds Aa to Bob's Apples balance. The difference is the fee, which is simply taken out of circulation.
+1. The app's Apples group model determines the cost (Ca) to give Carol an amount of Apples (Aa).
+2. The app's Apples group model deducts Ca from Alice's Apples balance, and adds Aa to Carol's Apples balance. The difference is the fee, which is simply taken out of circulation.
 
 This all happens in one atomic operation on the app's Apples group model. Notice that Alice paid the fee for Bob to receive the exact expected amount of Apples.
 
-However, operations between groups may require multiple steps. For example, Alice can pay Carol directly in Coconuts or FairShare as they are both members of both groups. But suppose Alice doesn't have enough of either, and needs to use her large holding of Apples instead. Here's how Alice uses Apples to pay Carol a specific amount (A) of FairShare:
+However, operations between groups may require multiple steps. For example, Alice can pay Bob directly in Bananas or FairShare as they are both members of both groups. But suppose Alice doesn't have enough of either, and needs to use her large holding of Apples instead. Here's how Alice uses Apples to pay Bob a specific amount (A) of FairShare:
 
 1. The app's FairShare group model determines the FairShare fee to get the cost Cf in FairShare for delivering the intended amount of FairShare (Af). (This is determined by FairShare group's fee.)
 2. The app's Apples group model determines the Apples/FairShare exchange rate and fee, and computes the total Apples cost (Ca) of producing Cf FairShare. (This is determined by the Apple group's exchange, acting as an [Automated Market Maker](https://en.wikipedia.org/wiki/Constant_function_market_maker).)
 3. The app's Apples group model deducts Ca from Alice's balance of Apples and adds it to its exchange's own Apples holdings.
 4. The app's Apples group model deducts Cf from its exchange's own FairShare holdings and generates a certificate for Cf FairShare.
-5. The app's FairShare model receives the certificate for Cf FairShare, takes the fee out of circulation, and adds Af to Carol's balance. (A certificate is used between steps 4 and 5 because the Groups can trust their own internal operations, but cannot trust the client or the wire messages to accurately present the number from 4 at step 5. The number is encoded in a certificate.)
+5. The app's FairShare model receives the certificate for Cf FairShare, takes the fee out of circulation, and adds Af to Bob's balance. (A certificate is used between steps 4 and 5 because the Groups can trust their own internal operations, but cannot trust the client or the wire messages to accurately present the number from 4 at step 5. The number is encoded in a certificate.)
 
 Note that the FairShare group reduced the amount of FairShare in circulation by the FairShare fee (Cf - Af). However, in this version, the number of Apples in circulation is not reduced, and the value of the Apples exchange pool is increased by the amount of the Apples fee. (See [Open Questions](#open-questions), below.)
 
@@ -154,7 +154,7 @@ For example:
 - When a person uses an exchange to pay someone in FairShare, the _exchange_ charges a fee to release its FairShare, and the _FairShare group_ charges its own (presumably low) fee as the receiver's FairShare gets credited. As with intra-group transfers, the requested credit amount is increased so that the sender pays the two fees.
 - When an investor withdraws from an exchange, the pool's group and the FairShare group will each take their respective fees. The UI shows the amount removed (i.e., it does not remove extra from the pool), and the UI shows that the credit is slightly less.
 
-**Atomicity** - In the inter-group payment case above, steps 2-4 are atomic and can be handled by one network message. However, there can be changes to fees and exchange rates between 1 and 2, and between 4 and 5. This can result in the recipient being paid slightly more or less than the intended amount. This is a much smaller time window than in Ethereum, and most variances will be absorbed in the rounding process. We do not implement minimum buy limits and maximum sell limits as in Uniswap. (And since operations are immediate, there is no need to implement block-inclusion deadlines.)
+**Atomicity** - In the inter-group payment case above, steps 2-4 are atomic and can be handled by one network message. However, there can be changes to fees and exchange rates between 1 and 2, and between 4 and 5. This can result in the recipient being paid slightly more or less than the intended amount. This is a much smaller time window than in Ethereum, and most variances will be absorbed in the rounding process. We do not implement minimum buy limits and maximum sell limits as in Uniswap. (And since operations are immediate, there is no need to implement block-inclusion deadlines. However, an interface to a blockchain would require this.)
 
 **Identity** - Even when _Creating New Groups and New Users_ is implemented (see [Exclusions](#exclusions), above), it should be easy for the user of an app to switch between multiple global identities, and to use a different one for each group if they choose. However, I have assumed that the combination of a username, display name, and picture are globally available to all. For example, when the user presents a QR code for someone else to pay them, that code is the same for all payers, without regard to what groups the payer is in or how the payer knows this particular payee.
 
