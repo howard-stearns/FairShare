@@ -23,10 +23,10 @@ export class FairShareError extends Error {
     // In some networking/replication models, domain operations must return the same values,
     // and so we cannot produce localized error message strings here.
     super(JSON.stringify(properties));
-    if (!name) name = this.constructor.name; // Default Error.name isn't helpful, and cannot use 'this' before calling super.
+    if (!name) name = this.constructor.name; // Default Error.name isn't helpful.
     Object.assign(this, {name, ...properties});
   }
-  static assert(actual, expected, label) {
+  static assert(actual, expected, label) { // Error if actual !== expected.
     if ( actual !== expected) throw new this({message: `Actual ${label} ${actual} does not match computed ${label} ${expected}. This should never happen.`});
   }
 }
@@ -106,7 +106,7 @@ export class Group extends SharedObject { // Represent a group with currency, ex
       totalGroupCoinReserve, totalReserveCurrencyReserve
     };
   }
-  isMember(user, whoIsAsking = user) {
+  isMember(user, whoIsAsking = user) { // Simulate a secure test for whether or not user is a member.
     const {people} = this;
     return people[whoIsAsking] && !people[whoIsAsking].isCandidate &&
       people[user] && !people[user].isCandidate;
@@ -131,7 +131,7 @@ export class Group extends SharedObject { // Represent a group with currency, ex
     return {amount, cost: amount}; // No fee to invest here. (But reserve currency will charge for issuing a cert.)
   }
 
-  send(user, payees, execute = false) {
+  send(user, payees, execute = false) { // Send {payee1: amount1, pay2: amount2 ...} within a group we are in.
     let total = 0;
     for (const payee in payees) {
       let amount = payees[payee];

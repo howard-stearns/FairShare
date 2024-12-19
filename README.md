@@ -2,7 +2,7 @@ _**<big>Functional Straw-Person Demo</big>**_
 
 > Synopsis: A working demonstration of FairShare functionality, as a step towards an MVP. The intent is to make the _operations_ concrete. (Not the look and feel.)
 
-> Status: Available **[HERE](app.html)** with canned data, locally persistent across sessions, but without networking across devices. _It's buggy. Now I know more about how to write it._
+> Status: Available **[HERE](app.html)** with canned data, without networking across devices. _It's buggy. Now I know more about how to write it._
 
 * auto-gen TOC:
 {:toc}
@@ -34,7 +34,7 @@ To that end, it is desirable that the functional straw-person of this project ha
 
 ### Vision
 
-For this first project I have built a limited, working, single-page Web app. There is no networking or security - just the behaviors acting locally, and locally persisting the data for all users and groups from session to session. It does not coordinate or synchronize between computers. Nonetheless, the behavior is concrete, with specific design decisions described below.
+For this first project I have built a limited, working, single-page Web app. There is no networking or security - just the behaviors acting locally, and locally persisting the application state (e.g., what screen you are on) from session to session. It does not coordinate or synchronize between computers. Nonetheless, the behavior is concrete, with specific design decisions described below.
  
 A person can switch between three existing users named "Alice", "Bob", and "Carol". The users are distributed among three existing groups:
 - The "Apples" group has members Alice and Carol.

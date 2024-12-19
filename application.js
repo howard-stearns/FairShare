@@ -62,7 +62,7 @@ export class ApplicationState { // The specific implementation subclasses this.
       return {cost, balance, certificateAmount};
     }
     if (fromGroup.isFairShare) {
-      if (!toGroup.people[user]) toGroup.throwUnknownUser(user); // For now, we must be a member. Later, we can maybe "deposit" the certificate for the payee, for them to redeem themselves.
+      if (!toGroup.isMember(user)) toGroup.throwUnknownUser(user); // For now, we must be a member. Later, we can maybe "deposit" the certificate for the payee, for them to redeem themselves.
       const certificateAmount = toGroup.computePurchaseCost(amount),
 	    {cost, balance, certificate} = fromGroup.issueFairShareCertificate(certificateAmount, user, payee, 'fairshare', execute),
 	    {redeemed, credit} = toGroup.redeemFairShareCertificate(certificate, execute);
